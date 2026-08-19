@@ -1,0 +1,180 @@
+@config "../../tailwind.config.cjs";
+
+@import "./fonts.css";
+@import "./variables.css";
+@import "./markdown.css";
+@import "./codemirror.css";
+@import "./command-menu.css";
+@import "./prism.css";
+
+@import "tailwindcss";
+
+body {
+  @apply bg-bg font-sans text-base font-normal text-text print:bg-[white];
+}
+
+::selection {
+  color: var(--color-text-selection);
+  background: var(--color-bg-selection);
+}
+
+/* .docs-story is the container for storybook stories on docs pages */
+.docs-story {
+  @apply bg-bg;
+}
+
+body,
+button {
+  font-variant-numeric: slashed-zero;
+}
+
+/* Hide the browser's default cancel button on search inputs */
+input[type="search"]::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+/* Show resize cursor when resizing */
+body:has([data-resizing="true"]) {
+  cursor: col-resize;
+}
+
+body:has([data-resizing="true"]) * {
+  pointer-events: none;
+}
+
+/* Focus styles for buttons, inputs, etc. */
+@utility focus-ring {
+  @apply focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-border-focus;
+}
+
+/* Link */
+
+@utility link {
+  @apply focus-ring rounded-sm underline decoration-text-secondary decoration-dotted decoration-1 underline-offset-[3px] hover:decoration-solid;
+}
+
+/* .link-external {
+  white-space: nowrap;
+} */
+
+.link-external::after {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  background-color: var(--color-text-secondary);
+  mask-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOCIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDggMTYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0yIDJoNXY1SDZWMy43MDdsLTQuNSA0LjVMLjc5MyA3LjVsNC41LTQuNUgyVjJaIiBmaWxsPSIjMDAwIi8+PC9zdmc+");
+  vertical-align: middle;
+  margin-left: 2px;
+}
+
+/* Card */
+
+@utility card {
+  @apply rounded-lg border-0 ring-1 ring-[var(--neutral-a3)] dark:ring-inset;
+  /* Undo ring-inset for e-paper theme */
+  /* Reference: https://github.com/tailwindlabs/tailwindcss/discussions/3016#discussioncomment-8797920 */
+  @apply epaper:dark:[--tw-ring-inset:_] epaper:ring-border;
+}
+
+@utility card-1 {
+  @apply card bg-bg-card shadow-sm;
+  @apply epaper:shadow-none;
+}
+
+@utility card-2 {
+  @apply card bg-bg-overlay-backdrop shadow-lg backdrop-blur-lg;
+  @apply epaper:bg-bg-overlay epaper:shadow-none epaper:ring-2 epaper:backdrop-blur-none;
+}
+
+@utility card-3 {
+  @apply card bg-bg-overlay-backdrop shadow-2xl backdrop-blur-xl;
+  @apply epaper:bg-bg-overlay epaper:shadow-none epaper:ring-2 epaper:backdrop-blur-none;
+}
+
+/* Nav item */
+
+.nav-item {
+  @apply flex h-8 items-center gap-3 rounded px-2 cursor-pointer coarse:h-10 coarse:gap-4 coarse:px-3;
+}
+
+.nav-item:is(a, button) {
+  @apply focus-ring hover:bg-bg-hover active:bg-bg-active;
+}
+
+.nav-item[aria-current],
+.nav-item[aria-pressed="true"] {
+  @apply bg-bg-secondary font-bold text-text;
+  @apply epaper:bg-text epaper:text-bg;
+}
+
+.nav-item[data-size="large"] {
+  @apply h-10 gap-4 px-3;
+}
+
+/* Scroll mask */
+
+@supports (animation-timeline: scroll()) {
+  @property --mask-height {
+    syntax: "<length>";
+    inherits: false;
+    initial-value: 0px;
+  }
+
+  .scroll-mask {
+    mask-image: linear-gradient(to bottom, transparent, black var(--mask-height));
+    -webkit-mask-image: linear-gradient(to bottom, transparent, black var(--mask-height));
+    animation: mask-height-grow forwards;
+    animation-timeline: scroll(self);
+    animation-range: 0 32px;
+  }
+
+  /* Disable scroll mask for e-paper */
+  [data-epaper] .scroll-mask {
+    mask-image: none;
+    -webkit-mask-image: none;
+    animation: none;
+  }
+
+  @keyframes mask-height-grow {
+    from {
+      --mask-height: 0px;
+    }
+    to {
+      --mask-height: 32px;
+    }
+  }
+}
+
+/* Book cover */
+
+.book-cover {
+  @apply shadow-md rounded-sm;
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.1s ease-out,
+    box-shadow 0.1s ease-out;
+}
+
+/* Copied from https://gist.github.com/kepano/8afc4cad9c32f4fde6ef6347f66a0571 */
+.book-cover:before {
+  content: "";
+  background-image: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.2),
+    rgba(255, 255, 255, 0.3) 1%,
+    transparent 6%,
+    rgba(0, 0, 0, 0.15) 8%,
+    rgba(255, 255, 255, 0.2) 9%,
+    transparent 20%
+  );
+  width: 100%;
+  position: absolute;
+  height: 100%;
+}
+
+.book-cover:hover {
+  @apply shadow-lg;
+  transform: translateY(-4px) scale(1.03) rotate(-2deg);
+}

@@ -1,0 +1,278 @@
+@import "./radix-colors.css";
+
+:root {
+  color-scheme: light dark;
+
+  /* Neutral color scale */
+  --neutral-1: var(--sand-1);
+  --neutral-2: var(--sand-2);
+  --neutral-3: var(--sand-3);
+  --neutral-4: var(--sand-4);
+  --neutral-5: var(--sand-5);
+  --neutral-6: var(--sand-6);
+  --neutral-7: var(--sand-7);
+  --neutral-8: var(--sand-8);
+  --neutral-9: var(--sand-9);
+  --neutral-10: var(--sand-10);
+  --neutral-11: var(--sand-11);
+  --neutral-12: var(--sand-12);
+  --neutral-a1: var(--sand-a1);
+  --neutral-a2: var(--sand-a2);
+  --neutral-a3: var(--sand-a3);
+  --neutral-a4: var(--sand-a4);
+  --neutral-a5: var(--sand-a5);
+  --neutral-a6: var(--sand-a6);
+  --neutral-a7: var(--sand-a7);
+  --neutral-a8: var(--sand-a8);
+  --neutral-a9: var(--sand-a9);
+  --neutral-a10: var(--sand-a10);
+  --neutral-a11: var(--sand-a11);
+  --neutral-a12: var(--sand-a12);
+  --neutral-contrast: #fff;
+
+  /* Accent color scale */
+  --accent-1: var(--cyan-1);
+  --accent-2: var(--cyan-2);
+  --accent-3: var(--cyan-3);
+  --accent-4: var(--cyan-4);
+  --accent-5: var(--cyan-5);
+  --accent-6: var(--cyan-6);
+  --accent-7: var(--cyan-7);
+  --accent-8: var(--cyan-8);
+  --accent-9: var(--cyan-9);
+  --accent-10: var(--cyan-10);
+  --accent-11: var(--cyan-11);
+  --accent-12: var(--cyan-12);
+  --accent-a1: var(--cyan-a1);
+  --accent-a2: var(--cyan-a2);
+  --accent-a3: var(--cyan-a3);
+  --accent-a4: var(--cyan-a4);
+  --accent-a5: var(--cyan-a5);
+  --accent-a6: var(--cyan-a6);
+  --accent-a7: var(--cyan-a7);
+  --accent-a8: var(--cyan-a8);
+  --accent-a9: var(--cyan-a9);
+  --accent-a10: var(--cyan-a10);
+  --accent-a11: var(--cyan-a11);
+  --accent-a12: var(--cyan-a12);
+  --accent-contrast: #fff;
+
+  /* Text colors */
+  --color-text: var(--neutral-12);
+  --color-text-secondary: var(--neutral-11);
+  --color-text-tertiary: var(--neutral-10);
+  --color-text-highlight: var(--yellow-a12);
+  --color-text-selection: var(--accent-12);
+  --color-text-success: var(--green-11);
+  --color-text-danger: var(--red-11);
+  --color-text-pending: var(--yellow-11);
+  --color-text-pinned: var(--orange-11);
+
+  /* Background colors */
+  --color-bg: var(--neutral-1);
+  --color-bg-hover: var(--neutral-a3);
+  --color-bg-active: var(--neutral-a4);
+  --color-bg-inset: var(--neutral-2);
+  --color-bg-card: white;
+  --color-bg-overlay: white;
+  --color-bg-backdrop: #fcfcfccc;
+  --color-bg-overlay-backdrop: #ffffffcc;
+  --color-bg-secondary: var(--neutral-a3);
+  --color-bg-secondary-hover: var(--neutral-a4);
+  --color-bg-secondary-active: var(--neutral-a5);
+  --color-bg-tertiary: var(--neutral-a4);
+  --color-bg-code-block: var(--neutral-a3);
+  --color-bg-highlight: var(--yellow-a3);
+  --color-bg-selection: var(--accent-a3);
+
+  /* Border colors */
+  --color-border: var(--neutral-a7);
+  --color-border-secondary: var(--neutral-a4);
+  --color-border-table: var(--neutral-7);
+  --color-border-focus: var(--accent-9);
+
+  /* Syntax colors */
+  --color-syntax-cyan: var(--cyan-11);
+  --color-syntax-red: var(--red-11);
+  --color-syntax-purple: var(--purple-11);
+  --color-syntax-green: var(--green-11);
+
+  /* Font families */
+  --font-family-sans: "iA Writer Quattro", system-ui, sans-serif;
+  --font-family-sans-mono: "iA Writer Mono", monospace;
+  --font-family-serif: "Literata Variable", Georgia, serif;
+  --font-family-serif-mono: "Monaspace Xenon", monospace;
+  --font-family-handwriting: "Shantell Sans Variable", system-ui, sans-serif;
+  --font-family-handwriting-mono: "Monaspace Radon", monospace;
+  --font-family-content: var(--font-family-sans);
+  --font-family-mono: var(--font-family-sans-mono);
+
+  /* Only applies to the handwriting font (Shantell Sans) */
+  font-variation-settings: "INFM" 75;
+
+  /* Font sizes */
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+
+  /* Font weights */
+  --font-weight-normal: 400;
+  --font-weight-bold: 600;
+
+  /* Border radii */
+  --border-radius-base: 8px;
+  --border-radius-sm: calc(var(--border-radius-base) - 4px);
+  --border-radius-lg: calc(var(--border-radius-base) + 4px);
+  --border-radius-xl: calc(var(--border-radius-base) + 8px);
+  --border-radius-full: 9999px;
+
+  /* Icons */
+  --icon-size: 16px;
+
+  /* Heights */
+  --height-app-header: 40px;
+  --height-nav-bar: 40px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Background colors */
+    --color-bg: var(--neutral-1);
+    --color-bg-inset: black;
+    --color-bg-card: var(--neutral-2);
+    --color-bg-overlay: var(--neutral-3);
+    --color-bg-backdrop: #111111cc;
+    --color-bg-overlay-backdrop: #222222cc;
+    --color-bg-code-block: var(--neutral-a2);
+
+    /* Border colors */
+    --color-border-focus: var(--accent-11);
+
+    /* Syntax colors */
+    --color-syntax-cyan: var(--cyan-12);
+    --color-syntax-red: var(--red-12);
+    --color-syntax-purple: var(--purple-12);
+    --color-syntax-green: var(--green-12);
+  }
+}
+
+@media (pointer: coarse) {
+  :root {
+    /* Font sizes */
+    --font-size-sm: 13px;
+    --font-size-base: 15px;
+
+    /* Font weights */
+    --font-weight-normal: 450;
+    --font-weight-bold: 650;
+
+    /* Border radii */
+    --border-radius-base: 8px;
+
+    /* Heights */
+    --height-app-header: 56px;
+    --height-nav-bar: 56px;
+  }
+}
+
+/* E-paper theme */
+
+[data-epaper] {
+  --color-light: #fff;
+  --color-dark: #000;
+
+  /* Base colors - define first */
+  --color-text: var(--color-dark);
+  --color-bg: var(--color-light);
+
+  /* Text colors */
+  --color-text-secondary: var(--color-text);
+  --color-text-tertiary: var(--color-text);
+  --color-text-highlight: var(--color-bg);
+  --color-text-selection: var(--color-bg);
+  --color-text-success: var(--color-text);
+  --color-text-danger: var(--color-text);
+  --color-text-pending: var(--color-text);
+  --color-text-pinned: var(--color-text);
+
+  /* Background colors */
+  --color-bg-hover: transparent;
+  --color-bg-active: transparent;
+  --color-bg-inset: var(--color-bg);
+  --color-bg-card: var(--color-bg);
+  --color-bg-overlay: var(--color-bg);
+  --color-bg-backdrop: var(--color-bg);
+  --color-bg-overlay-backdrop: var(--color-bg);
+  --color-bg-secondary: var(--color-bg);
+  --color-bg-secondary-hover: transparent;
+  --color-bg-secondary-active: transparent;
+  --color-bg-tertiary: var(--color-bg);
+  --color-bg-code-block: var(--color-bg);
+  --color-bg-highlight: var(--color-text);
+  --color-bg-selection: var(--color-text);
+
+  /* Border colors */
+  --color-border: var(--color-text);
+  --color-border-secondary: var(--color-text);
+  --color-border-table: var(--color-text);
+  --color-border-focus: var(--color-text);
+
+  /* Syntax colors */
+  --color-syntax-cyan: var(--color-text);
+  --color-syntax-red: var(--color-text);
+  --color-syntax-purple: var(--color-text);
+  --color-syntax-green: var(--color-text);
+
+  /* Border radii */
+  --border-radius-base: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-epaper] {
+    --color-text: var(--color-light);
+    --color-bg: var(--color-dark);
+  }
+}
+
+/* Print styles */
+
+@media print {
+  :root {
+    /* Text colors */
+    --color-text: #000;
+    --color-text-secondary: var(--color-text);
+    --color-text-tertiary: var(--color-text);
+    --color-text-highlight: var(--color-bg);
+    --color-text-selection: var(--color-bg);
+    --color-text-success: var(--color-text);
+    --color-text-danger: var(--color-text);
+    --color-text-pending: var(--color-text);
+    --color-text-pinned: var(--color-text);
+
+    /* Background colors */
+    --color-bg: #fff;
+    --color-bg-inset: var(--color-bg);
+    --color-bg-card: var(--color-bg);
+    --color-bg-overlay: var(--color-bg);
+    --color-bg-backdrop: var(--color-bg);
+    --color-bg-overlay-backdrop: var(--color-bg);
+    --color-bg-secondary: var(--color-bg);
+    --color-bg-tertiary: var(--color-bg);
+    --color-bg-code-block: var(--color-bg);
+    --color-bg-highlight: var(--color-text);
+    --color-bg-selection: var(--color-text);
+
+    /* Border colors */
+    --color-border: var(--color-text);
+    --color-border-secondary: var(--color-text);
+    --color-border-table: var(--color-text);
+    --color-border-focus: var(--color-text);
+
+    /* Syntax colors */
+    --color-syntax-cyan: var(--color-text);
+    --color-syntax-red: var(--color-text);
+    --color-syntax-purple: var(--color-text);
+    --color-syntax-green: var(--color-text);
+  }
+}
