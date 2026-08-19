@@ -21,9 +21,9 @@ export default defineConfig({
       registerType: "prompt",
       injectRegister: "auto",
       manifest: {
-        name: "Lumen",
-        short_name: "Lumen",
-        description: "A simple note-taking app for better thinking",
+        name: "Percolate",
+        short_name: "Percolate",
+        description: "A block-based note-taking app for better thinking",
         theme_color: "#000000",
         background_color: "#000000",
         icons: [

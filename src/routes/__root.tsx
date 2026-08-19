@@ -6,7 +6,7 @@ export const Route = createRootRoute({
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   head: () => ({
-    meta: [{ title: "Lumen" }],
+    meta: [{ title: "Percolate" }],
   }),
 })
 

@@ -1,5 +1,4 @@
 import { useAtomValue } from "jotai"
-import { useNetworkState } from "react-use"
 import { LoadingIcon16 } from "../components/icons"
 import { RepoForm } from "../components/repo-form"
 import {
@@ -8,12 +7,9 @@ import {
   isRepoClonedAtom,
   isRepoNotClonedAtom,
   isSignedOutAtom,
-  openaiKeyAtom,
-  voiceAssistantEnabledAtom,
 } from "../global-state"
 import { cx } from "../utils/cx"
 import { PageHeader, PageHeaderProps } from "./page-header"
-import { VoiceConversationBar } from "./voice-conversation"
 import { HoverCard } from "./hover-card"
 
 type PageLayoutProps = PageHeaderProps & {
@@ -36,9 +32,6 @@ export function PageLayout({
   const isCloningRepo = useAtomValue(isCloningRepoAtom)
   const isRepoCloned = useAtomValue(isRepoClonedAtom)
   const githubRepo = useAtomValue(githubRepoAtom)
-  const openaiKey = useAtomValue(openaiKeyAtom)
-  const voiceAssistantEnabled = useAtomValue(voiceAssistantEnabledAtom)
-  const { online } = useNetworkState()
 
   return (
     <HoverCard.Provider>
@@ -78,7 +71,6 @@ export function PageLayout({
 
           <div className="absolute bottom-3 right-3 flex items-center gap-2 coarse:gap-3">
             {floatingActions}
-            {online && openaiKey && voiceAssistantEnabled ? <VoiceConversationBar /> : null}
           </div>
         </div>
       </div>

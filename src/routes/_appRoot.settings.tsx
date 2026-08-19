@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useAtom, useAtomValue } from "jotai"
 import { useState } from "react"
 import { useNetworkState } from "react-use"
@@ -6,7 +6,6 @@ import { Button } from "../components/button"
 import { useSignOut } from "../components/github-auth"
 import { GitHubAvatar } from "../components/github-avatar"
 import { LoadingIcon16, SettingsIcon16 } from "../components/icons"
-import { OpenAIKeyInput } from "../components/openai-key-input"
 import { PageLayout } from "../components/page-layout"
 import { RepoForm } from "../components/repo-form"
 import { Signature } from "../components/signature"
@@ -15,19 +14,16 @@ import {
   epaperAtom,
   githubRepoAtom,
   githubUserAtom,
-  hasOpenAIKeyAtom,
   isCloningRepoAtom,
   isRepoClonedAtom,
   isRepoNotClonedAtom,
   vimModeAtom,
-  voiceAssistantEnabledAtom,
 } from "../global-state"
-import { cx } from "../utils/cx"
 
 export const Route = createFileRoute("/_appRoot/settings")({
   component: RouteComponent,
   head: () => ({
-    meta: [{ title: "Settings · Lumen" }],
+    meta: [{ title: "Settings · Percolate" }],
   }),
 })
 
@@ -39,7 +35,6 @@ function RouteComponent() {
           <GitHubSection />
           <AppearanceSection />
           <EditorSection />
-          <AISection />
           <div className="p-5 text-text-tertiary self-center flex flex-col gap-3 items-center">
             <span className="text-sm">
               Made by{" "}
@@ -180,49 +175,6 @@ function EditorSection() {
         <label htmlFor="vim-mode" className="select-none">
           Vim mode
         </label>
-      </div>
-    </SettingsSection>
-  )
-}
-
-function AISection() {
-  const hasOpenAIKey = useAtomValue(hasOpenAIKeyAtom)
-  const [voiceAssistantEnabled, setVoiceAssistantEnabled] = useAtom(voiceAssistantEnabledAtom)
-
-  return (
-    <SettingsSection title="AI">
-      <div className="flex flex-col gap-4">
-        <OpenAIKeyInput />
-        <div role="separator" className="h-px bg-border-secondary" />
-        <div className="flex flex-col gap-3 leading-4 coarse:gap-4">
-          <div className="flex items-start gap-2.5">
-            <Switch
-              id="voice-assistant"
-              disabled={!hasOpenAIKey}
-              checked={hasOpenAIKey && voiceAssistantEnabled}
-              onCheckedChange={(checked) => setVoiceAssistantEnabled(checked)}
-            />
-            <div className="flex flex-col gap-2 leading-4 coarse:leading-5">
-              <label
-                htmlFor="voice-assistant"
-                className={cx(
-                  "select-none",
-                  !hasOpenAIKey && "cursor-not-allowed text-text-secondary",
-                )}
-              >
-                Voice assistant <span className="italic text-text-secondary">(beta)</span>
-              </label>
-              <Link
-                to="/notes/$"
-                params={{ _splat: ".lumen/voice-instructions" }}
-                search={{ mode: "write", query: undefined, view: "grid" }}
-                className="link text-text-secondary"
-              >
-                Custom instructions
-              </Link>
-            </div>
-          </div>
-        </div>
       </div>
     </SettingsSection>
   )

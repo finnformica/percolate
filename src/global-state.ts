@@ -551,16 +551,9 @@ function createGlobalStateMachine() {
         logError: (_, event) => {
           console.error(event.data)
         },
-        logUser: (context) => {
-          if (import.meta.env.DEV) return
-          const token = context.githubUser?.token
-          if (token) {
-            fetch("/api/log-user", {
-              method: "POST",
-              headers: { Authorization: `Bearer ${token}` },
-            }).catch(() => {})
-          }
-        },
+        // Analytics logging was removed with the Supabase backend. The action
+        // is kept as a no-op so the generated XState typegen stays consistent.
+        logUser: () => {},
       },
     },
   )
@@ -868,15 +861,3 @@ export const sidebarAtom = atomWithStorage<"expanded" | "collapsed">("sidebar", 
 export const isHelpPanelOpenAtom = atomWithStorage<boolean>("help-panel", false)
 
 export const calendarLayoutAtom = atomWithStorage<"week" | "month">("calendar-layout", "week")
-
-// -----------------------------------------------------------------------------
-// AI
-// -----------------------------------------------------------------------------
-
-export const OPENAI_KEY_STORAGE_KEY = "openai_key"
-
-export const openaiKeyAtom = atomWithStorage<string>(OPENAI_KEY_STORAGE_KEY, "")
-
-export const hasOpenAIKeyAtom = selectAtom(openaiKeyAtom, (key) => key !== "")
-
-export const voiceAssistantEnabledAtom = atomWithStorage<boolean>("voice_assistant_enabled", false)

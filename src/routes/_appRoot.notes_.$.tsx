@@ -4,13 +4,12 @@ import { createFileRoute } from "@tanstack/react-router"
 import { ReactCodeMirrorRef } from "@uiw/react-codemirror"
 import copy from "copy-to-clipboard"
 import ejs from "ejs"
-import { useAtomValue, useSetAtom } from "jotai"
+import { useAtomValue } from "jotai"
 import { selectAtom } from "jotai/utils"
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { useHotkeys } from "react-hotkeys-hook"
 import { useNetworkState } from "react-use"
 import useResizeObserver from "use-resize-observer"
-import { z } from "zod/v3"
 import { Button } from "../components/button"
 import { Calendar } from "../components/calendar"
 import { CalendarHeader } from "../components/calendar-header"
@@ -47,7 +46,6 @@ import { PillButton } from "../components/pill-button"
 import { SegmentedControl } from "../components/segmented-control"
 import { ShareDialog } from "../components/share-dialog"
 import { Tooltip } from "../components/tooltip"
-import { Tool, voiceConversationMachineAtom } from "../components/voice-conversation"
 import {
   dailyTemplateAtom,
   defaultFontAtom,
@@ -69,7 +67,6 @@ import { clearNoteDraft, getNoteDraft, setNoteDraft } from "../utils/note-draft"
 import { getInvalidNoteIdCharacters } from "../utils/note-id"
 import { parseNote } from "../utils/parse-note"
 import { pluralize } from "../utils/pluralize"
-import { notificationSound, playSound } from "../utils/sounds"
 
 type RouteSearch = {
   mode: "read" | "write"
@@ -304,129 +301,10 @@ function NotePage() {
   // Value refs
   // These refs allow us to access the latest values of these variables inside callbacks and effects
   // without having to include them in dependency arrays, which could cause unnecessary re-renders.
-  const noteRef = useValueRef(note)
-  const githubRepoRef = useValueRef(githubRepo)
   const handleSaveRef = useValueRef(handleSave)
-  const deleteNoteRef = useValueRef(deleteNote)
   const editorValueRef = useValueRef(editorValue)
-  const setEditorValueRef = useValueRef(setEditorValue)
   const switchToReadingRef = useValueRef(switchToReading)
-  const switchToWritingRef = useValueRef(switchToWriting)
   const isDraftRef = useValueRef(isDraft)
-
-  // Voice conversation tools
-  const sendVoiceConversation = useSetAtom(voiceConversationMachineAtom)
-  React.useEffect(() => {
-    const tools = [
-      {
-        name: "read_current_note",
-        description: "Read the content of the current note.",
-        parameters: z.object({}),
-        execute: async () => {
-          return JSON.stringify({
-            note_id: noteId,
-            content: editorValueRef.current,
-          })
-        },
-      } satisfies Tool<Record<string, never>>,
-      {
-        name: "edit_current_note",
-        description:
-          "Replace the entire content of the current note with the provided text. This overwrites all existing content.",
-        parameters: z.object({
-          content: z.string(),
-        }),
-        execute: async ({ content }) => {
-          setEditorValueRef.current(content)
-          playSound(notificationSound)
-          return JSON.stringify({ success: true })
-        },
-      } satisfies Tool<{ content: string }>,
-      {
-        name: "save_current_note",
-        description: "Save the current note.",
-        parameters: z.object({}),
-        execute: async () => {
-          handleSaveRef.current(editorValueRef.current)
-          playSound(notificationSound)
-          return JSON.stringify({ success: true })
-        },
-      } satisfies Tool<Record<string, never>>,
-      {
-        name: "delete_current_note",
-        description: "Delete the current note. This action is irreversible.",
-        parameters: z.object({}),
-        execute: async () => {
-          if (!noteId) return
-
-          // Ask the user to confirm before deleting a note
-          if (!window.confirm("Are you sure you want to delete this note?")) {
-            return JSON.stringify({ error: "Operation cancelled by user" })
-          }
-
-          clearNoteDraft({ githubRepo: githubRepoRef.current, noteId })
-
-          if (noteRef.current) {
-            deleteNoteRef.current(noteRef.current.id)
-          }
-
-          playSound(notificationSound)
-
-          // Go home
-          await navigate({
-            to: "/",
-            search: { query: undefined, view: "grid" },
-            replace: true,
-          })
-
-          return JSON.stringify({ success: true })
-        },
-      } satisfies Tool<Record<string, never>>,
-      {
-        name: "show_preview",
-        description:
-          "Switch the view to show the rendered markdown preview of the current note. This only affects how the note is displayed.",
-        parameters: z.object({}),
-        execute: async () => {
-          switchToReadingRef.current()
-
-          return JSON.stringify({ success: true })
-        },
-      } satisfies Tool<Record<string, never>>,
-      {
-        name: "show_source",
-        description:
-          "Switch the view to show the raw markdown source of the current note. This only affects how the note is displayed.",
-        parameters: z.object({}),
-        execute: async () => {
-          switchToWritingRef.current()
-
-          return JSON.stringify({ success: true })
-        },
-      } satisfies Tool<Record<string, never>>,
-    ]
-
-    sendVoiceConversation({ type: "ADD_TOOLS", tools })
-
-    return () => {
-      sendVoiceConversation({
-        type: "REMOVE_TOOLS",
-        toolNames: tools.map((tool) => tool.name),
-      })
-    }
-  }, [
-    deleteNoteRef,
-    editorValueRef,
-    githubRepoRef,
-    handleSaveRef,
-    noteRef,
-    setEditorValueRef,
-    switchToReadingRef,
-    switchToWritingRef,
-    navigate,
-    noteId,
-    sendVoiceConversation,
-  ])
 
   // Keyboard shortcuts
   useHotkeys(

@@ -11,7 +11,6 @@
 // Import Routes
 
 import { Route as rootRoute } from "./routes/__root"
-import { Route as AiImport } from "./routes/ai"
 import { Route as AppRootImport } from "./routes/_appRoot"
 import { Route as AppRootIndexImport } from "./routes/_appRoot.index"
 import { Route as ShareGistIdImport } from "./routes/share.$gistId"
@@ -23,12 +22,6 @@ import { Route as AppRootTagsSplatImport } from "./routes/_appRoot.tags_.$"
 import { Route as AppRootNotesSplatImport } from "./routes/_appRoot.notes_.$"
 
 // Create/Update Routes
-
-const AiRoute = AiImport.update({
-  id: "/ai",
-  path: "/ai",
-  getParentRoute: () => rootRoute,
-} as any)
 
 const AppRootRoute = AppRootImport.update({
   id: "/_appRoot",
@@ -92,13 +85,6 @@ declare module "@tanstack/react-router" {
       path: ""
       fullPath: ""
       preLoaderRoute: typeof AppRootImport
-      parentRoute: typeof rootRoute
-    }
-    "/ai": {
-      id: "/ai"
-      path: "/ai"
-      fullPath: "/ai"
-      preLoaderRoute: typeof AiImport
       parentRoute: typeof rootRoute
     }
     "/_appRoot/file": {
@@ -186,7 +172,6 @@ const AppRootRouteWithChildren = AppRootRoute._addFileChildren(AppRootRouteChild
 
 export interface FileRoutesByFullPath {
   "": typeof AppRootRouteWithChildren
-  "/ai": typeof AiRoute
   "/file": typeof AppRootFileRoute
   "/settings": typeof AppRootSettingsRoute
   "/share/$gistId": typeof ShareGistIdRoute
@@ -198,7 +183,6 @@ export interface FileRoutesByFullPath {
 }
 
 export interface FileRoutesByTo {
-  "/ai": typeof AiRoute
   "/file": typeof AppRootFileRoute
   "/settings": typeof AppRootSettingsRoute
   "/share/$gistId": typeof ShareGistIdRoute
@@ -212,7 +196,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRoute
   "/_appRoot": typeof AppRootRouteWithChildren
-  "/ai": typeof AiRoute
   "/_appRoot/file": typeof AppRootFileRoute
   "/_appRoot/settings": typeof AppRootSettingsRoute
   "/share/$gistId": typeof ShareGistIdRoute
@@ -227,7 +210,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | ""
-    | "/ai"
     | "/file"
     | "/settings"
     | "/share/$gistId"
@@ -237,20 +219,10 @@ export interface FileRouteTypes {
     | "/notes"
     | "/tags"
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | "/ai"
-    | "/file"
-    | "/settings"
-    | "/share/$gistId"
-    | "/"
-    | "/notes/$"
-    | "/tags/$"
-    | "/notes"
-    | "/tags"
+  to: "/file" | "/settings" | "/share/$gistId" | "/" | "/notes/$" | "/tags/$" | "/notes" | "/tags"
   id:
     | "__root__"
     | "/_appRoot"
-    | "/ai"
     | "/_appRoot/file"
     | "/_appRoot/settings"
     | "/share/$gistId"
@@ -264,13 +236,11 @@ export interface FileRouteTypes {
 
 export interface RootRouteChildren {
   AppRootRoute: typeof AppRootRouteWithChildren
-  AiRoute: typeof AiRoute
   ShareGistIdRoute: typeof ShareGistIdRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   AppRootRoute: AppRootRouteWithChildren,
-  AiRoute: AiRoute,
   ShareGistIdRoute: ShareGistIdRoute,
 }
 
@@ -285,7 +255,6 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/_appRoot",
-        "/ai",
         "/share/$gistId"
       ]
     },
@@ -300,9 +269,6 @@ export const routeTree = rootRoute
         "/_appRoot/notes/",
         "/_appRoot/tags/"
       ]
-    },
-    "/ai": {
-      "filePath": "ai.tsx"
     },
     "/_appRoot/file": {
       "filePath": "_appRoot.file.tsx",

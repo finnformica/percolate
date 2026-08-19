@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_appRoot/tags_/$")({
   },
   component: RouteComponent,
   head: ({ params }) => ({
-    meta: [{ title: `#${params._splat} · Lumen` }],
+    meta: [{ title: `#${params._splat} · Percolate` }],
   }),
 })
 

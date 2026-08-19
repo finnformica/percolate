@@ -59,7 +59,7 @@ export const Route = createFileRoute("/share/$gistId")({
   },
   head: ({ loaderData }) => {
     const { gist, note } = loaderData
-    const title = note?.title || gist?.description || note?.displayName || "Lumen"
+    const title = note?.title || gist?.description || note?.displayName || "Percolate"
     const emoji = getLeadingEmoji(title) || "📝"
     const encodedEmoji = encodeURIComponent(emoji)
     return {
