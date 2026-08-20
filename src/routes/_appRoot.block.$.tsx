@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { formatDistanceToNow } from "date-fns"
-import { Fragment, useEffect, useState } from "react"
-import { useDebouncedCallback } from "use-debounce"
+import { Fragment, useCallback, useEffect, useState } from "react"
 import { parse } from "../blocks/parse"
 import { serialize } from "../blocks/serialize"
 import { emptyBlock } from "../blocks/ops"
 import type { BlockDoc } from "../blocks/types"
 import { BlockEditor } from "../components/block-editor/block-editor"
+import { Button } from "../components/button"
 import { PageLayout } from "../components/page-layout"
 import { PropertyValue } from "../components/property-value"
 import { useNoteById, useSaveNote } from "../hooks/note"
@@ -65,35 +65,64 @@ function RouteComponent() {
   const saveNote = useSaveNote()
 
   const [doc, setDoc] = useState<BlockDoc | null>(null)
-  const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle")
+  const [status, setStatus] = useState<"clean" | "dirty" | "saving" | "saved">("clean")
 
   // Parse the note's markdown into blocks once, when it first loads.
   useEffect(() => {
     if (note && doc === null) setDoc(withStarterBlock(parse(note.content)))
   }, [note, doc])
 
-  // Serialize back to markdown and save through the existing GitHub sync
-  // (writes the file, commits, and pushes — debounced in the state machine).
-  const save = useDebouncedCallback((next: BlockDoc) => {
-    if (!noteId) return
-    void Promise.resolve(saveNote({ id: noteId, content: serialize(next) })).then(() =>
-      setStatus("saved"),
-    )
-  }, 800)
-
+  // Edits update the in-memory doc and mark it dirty — saving is explicit.
   const handleChange = (next: BlockDoc) => {
     setDoc(next)
-    setStatus("saving")
-    save(next)
+    setStatus("dirty")
   }
+
+  // Serialize back to markdown and save through the existing GitHub sync
+  // (writes the file, commits, and pushes via the state machine).
+  const handleSave = useCallback(async () => {
+    if (!noteId || doc === null) return
+    setStatus("saving")
+    await Promise.resolve(saveNote({ id: noteId, content: serialize(doc) }))
+    setStatus("saved")
+  }, [noteId, doc, saveNote])
+
+  // ⌘S / Ctrl+S saves.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault()
+        void handleSave()
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [handleSave])
 
   return (
     <PageLayout
       title={note?.title || noteId || "Block editor"}
       actions={
-        <span className="text-sm text-text-secondary">
-          {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : null}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-text-secondary">
+            {status === "saving"
+              ? "Saving…"
+              : status === "dirty"
+                ? "Unsaved changes"
+                : status === "saved"
+                  ? "Saved"
+                  : null}
+          </span>
+          <Button
+            variant="primary"
+            size="small"
+            shortcut={["⌘", "S"]}
+            disabled={status !== "dirty"}
+            onClick={() => void handleSave()}
+          >
+            Save
+          </Button>
+        </div>
       }
     >
       <div className="mx-auto max-w-3xl p-4">

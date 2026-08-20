@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import type { BlockDoc } from "../../blocks/types"
 import {
   emptyBlock,
@@ -30,6 +30,22 @@ export function BlockEditor({
   const [focus, setFocus] = useState<FocusRequest | null>(null)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
+  // Blocks in the order they appear on screen (depth-first, skipping the
+  // children of collapsed blocks). Used for up/down arrow navigation.
+  const visibleOrder = useMemo(() => {
+    const order: string[] = []
+    const walk = (ids: string[]) => {
+      for (const id of ids) {
+        const block = doc.blocks[id]
+        if (!block) continue
+        order.push(id)
+        if (!collapsed.has(id)) walk(block.children)
+      }
+    }
+    walk(doc.rootBlockIds)
+    return order
+  }, [doc, collapsed])
+
   const api: BlockEditorApi = {
     focus,
     setFocus,
@@ -60,6 +76,15 @@ export function BlockEditor({
       const { doc: next, focusId } = removeBlock(doc, id)
       onChange(next)
       if (focusId) setFocus({ id: focusId })
+    },
+    onArrowUp: (id) => {
+      const i = visibleOrder.indexOf(id)
+      if (i > 0) setFocus({ id: visibleOrder[i - 1], atStart: false })
+    },
+    onArrowDown: (id) => {
+      const i = visibleOrder.indexOf(id)
+      if (i >= 0 && i < visibleOrder.length - 1)
+        setFocus({ id: visibleOrder[i + 1], atStart: true })
     },
   }
 

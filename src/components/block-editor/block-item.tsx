@@ -19,6 +19,9 @@ export interface BlockEditorApi {
   onIndent: (id: string) => void
   onOutdent: (id: string) => void
   onBackspaceEmpty: (id: string) => void
+  /** Move editing focus to the previous/next block in visual order. */
+  onArrowUp: (id: string) => void
+  onArrowDown: (id: string) => void
 }
 
 export function BlockItem({
@@ -66,6 +69,20 @@ export function BlockItem({
       if (el.selectionStart === 0 && el.selectionEnd === 0 && block.content === "") {
         event.preventDefault()
         api.onBackspaceEmpty(block.id)
+      }
+    } else if (event.key === "ArrowUp" && !event.shiftKey && !event.metaKey && !event.altKey) {
+      // Move to the previous block only when the caret is already on the first
+      // line; otherwise let the textarea handle in-block cursor movement.
+      const el = event.currentTarget
+      if (el.value.lastIndexOf("\n", el.selectionStart - 1) === -1) {
+        event.preventDefault()
+        api.onArrowUp(block.id)
+      }
+    } else if (event.key === "ArrowDown" && !event.shiftKey && !event.metaKey && !event.altKey) {
+      const el = event.currentTarget
+      if (el.value.indexOf("\n", el.selectionStart) === -1) {
+        event.preventDefault()
+        api.onArrowDown(block.id)
       }
     }
   }
