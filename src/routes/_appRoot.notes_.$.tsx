@@ -92,6 +92,12 @@ export const Route = createFileRoute("/_appRoot/notes_/$")({
   // seed content for a new note. Daily/weekly (calendar) notes stay on the
   // classic editor so their date navigation is preserved.
   beforeLoad: ({ search, params }) => {
+    // Never redirect while a GitHub OAuth callback is in flight: the token
+    // params (user_token, …) ride on the raw URL and would be dropped by the
+    // redirect, breaking sign-in. Let the app consume them first.
+    if (typeof window !== "undefined" && window.location.search.includes("user_token")) {
+      return
+    }
     const splat = params._splat ?? ""
     const isCalendarNote = isValidDateString(splat) || isValidWeekString(splat)
     if (!search.classic && !isCalendarNote) {
