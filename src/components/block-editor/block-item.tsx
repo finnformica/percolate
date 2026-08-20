@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from "react"
-import type { ChangeEvent, KeyboardEvent } from "react"
+import type { ChangeEvent, ClipboardEvent, KeyboardEvent } from "react"
 import { cx } from "../../utils/cx"
 import type { Block, BlockDoc } from "../../blocks/types"
 import {
@@ -11,10 +11,13 @@ import {
 } from "../../blocks/block-type"
 import { IconButton } from "../icon-button"
 import { BlockContent } from "./block-content"
+import { caretLineFlags } from "./caret"
 
 export interface FocusRequest {
   id: string
   atStart?: boolean
+  /** Explicit caret offset; overrides `atStart` when set. */
+  caret?: number
 }
 
 export interface BlockEditorApi {
@@ -37,6 +40,10 @@ export interface BlockEditorApi {
   onEnter: (id: string, initial?: string) => void
   /** Insert a new block before `id`, optionally pre-filled (e.g. a list marker). */
   onEnterBefore: (id: string, initial?: string) => void
+  /** Split `id`: keep `keepContent`, move the rest into a new block after it. */
+  onSplit: (id: string, keepContent: string, newContent: string) => void
+  /** Replace `id` with blocks parsed from pasted markdown, placing the caret. */
+  onPaste: (id: string, prefix: string, before: string, pasted: string, after: string) => void
   onIndent: (id: string) => void
   onOutdent: (id: string) => void
   onBackspaceEmpty: (id: string) => void
@@ -114,9 +121,14 @@ export function BlockItem({
     const el = textareaRef.current
     if (!el) return
     el.focus()
-    const pos = api.focus?.atStart ? 0 : el.value.length
+    const pos =
+      api.focus?.caret !== undefined
+        ? Math.min(api.focus.caret, el.value.length)
+        : api.focus?.atStart
+          ? 0
+          : el.value.length
     el.setSelectionRange(pos, pos)
-  }, [editing, api.focus?.atStart])
+  }, [editing, api.focus?.atStart, api.focus?.caret])
 
   // Resize on content change, and restore the caret after a marker shortcut
   // reshaped the visible text (e.g. typing `# ` promoted the block to a
@@ -167,12 +179,21 @@ export function BlockItem({
       api.onEnterBefore(block.id, continuationMarker(type))
     } else if (event.key === "Enter") {
       event.preventDefault()
+      const el = event.currentTarget
       const isList = type.kind === "bullet" || type.kind === "todo" || type.kind === "ordered"
+      const beforeBody = el.value.slice(0, el.selectionStart)
+      const afterBody = el.value.slice(el.selectionEnd)
+      const hasSelection = el.selectionStart !== el.selectionEnd
       if (isList && body.trim() === "") {
         // Enter on an empty list item exits the list (becomes a paragraph).
         api.onContentChange(block.id, "")
-      } else {
+      } else if (!hasSelection && afterBody === "") {
+        // Caret at the end — just start a fresh block.
         api.onEnter(block.id, continuationMarker(type))
+      } else {
+        // Caret mid-line (or a selection): keep the text before the caret and
+        // move the text after it into the new block, continuing the list style.
+        api.onSplit(block.id, prefix + beforeBody, continuationMarker(type) + afterBody)
       }
     } else if (event.key === "Escape") {
       event.preventDefault()
@@ -194,18 +215,31 @@ export function BlockItem({
         }
       }
     } else if (event.key === "ArrowUp" && !event.shiftKey && !event.metaKey && !event.altKey) {
-      const el = event.currentTarget
-      if (el.value.lastIndexOf("\n", el.selectionStart - 1) === -1) {
+      // Only leave the block when the caret is on its first *visual* line —
+      // otherwise let the textarea move the caret up within a wrapped block.
+      if (caretLineFlags(event.currentTarget).atFirst) {
         event.preventDefault()
         api.onArrowUp(block.id)
       }
     } else if (event.key === "ArrowDown" && !event.shiftKey && !event.metaKey && !event.altKey) {
-      const el = event.currentTarget
-      if (el.value.indexOf("\n", el.selectionStart) === -1) {
+      if (caretLineFlags(event.currentTarget).atLast) {
         event.preventDefault()
         api.onArrowDown(block.id)
       }
     }
+  }
+
+  const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    const text = event.clipboardData?.getData("text/plain") ?? ""
+    const normalized = text.replace(/\r\n?/g, "\n")
+    // Single-line paste is ordinary inline insertion; only multi-line paste
+    // needs to be spread across blocks.
+    if (!normalized.includes("\n")) return
+    event.preventDefault()
+    const el = event.currentTarget
+    const before = el.value.slice(0, el.selectionStart)
+    const after = el.value.slice(el.selectionEnd)
+    api.onPaste(block.id, prefix, before, normalized, after)
   }
 
   const handleSelectKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -287,6 +321,7 @@ export function BlockItem({
                 spellCheck
                 onChange={handleTextareaChange}
                 onKeyDown={handleEditKeyDown}
+                onPaste={handlePaste}
                 onBlur={() => api.setFocus(null)}
                 className={cx(
                   "min-w-0 flex-1 resize-none border-none bg-transparent p-0 font-content leading-relaxed text-text outline-none",

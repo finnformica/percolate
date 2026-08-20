@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react"
 import type { KeyboardEvent } from "react"
 import type { BlockDoc } from "../../blocks/types"
+import { stripMarker } from "../../blocks/block-type"
+import { parse } from "../../blocks/parse"
 import {
   emptyBlock,
   indentBlock,
@@ -8,6 +10,7 @@ import {
   insertBefore,
   outdentBlock,
   removeBlock,
+  spliceBlocks,
   updateContent,
 } from "../../blocks/ops"
 import { BlockItem, type BlockEditorApi, type FocusRequest } from "./block-item"
@@ -118,6 +121,26 @@ export function BlockEditor({
       const fresh = emptyBlock(initial)
       history.commit(doc, insertBefore(doc, id, fresh), { type: "structural" })
       edit(fresh.id)
+    },
+    onSplit: (id, keepContent, newContent) => {
+      const fresh = emptyBlock(newContent)
+      const updated = updateContent(doc, id, keepContent)
+      history.commit(doc, insertAfter(updated, id, fresh), { type: "structural" })
+      edit(fresh.id, true)
+    },
+    onPaste: (id, prefix, before, pasted, after) => {
+      // Re-form the block's line with the pasted text spliced in at the caret,
+      // then parse the whole thing so markdown prefixes and blank lines become
+      // the right blocks. The current block's marker stays on the first line.
+      const sub = parse(prefix + before + pasted + after)
+      const result = spliceBlocks(doc, id, sub)
+      if (!result) return
+      history.commit(doc, result.doc, { type: "structural" })
+      // Place the caret at the paste boundary — just before the trailing text.
+      const last = result.doc.blocks[result.lastId]
+      const caret = Math.max(0, stripMarker(last.content).length - after.length)
+      setSelected(result.lastId)
+      setFocus({ id: result.lastId, caret })
     },
     onIndent: (id) => {
       history.commit(doc, indentBlock(doc, id), { type: "structural" })

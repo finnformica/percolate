@@ -6,8 +6,10 @@ import {
   insertBefore,
   outdentBlock,
   removeBlock,
+  spliceBlocks,
   updateContent,
 } from "./ops"
+import { parse } from "./parse"
 import type { BlockDoc } from "./types"
 
 /**
@@ -123,6 +125,43 @@ describe("insertBefore", () => {
   it("returns the same doc for an unknown refId", () => {
     const doc = fixture()
     expect(insertBefore(doc, "nope", { id: "x", content: "", children: [] })).toBe(doc)
+  })
+})
+
+describe("spliceBlocks", () => {
+  it("replaces a block with the parsed blocks, in order", () => {
+    const doc = fixture()
+    const sub = parse("one\ntwo\nthree")
+    const result = spliceBlocks(doc, "b", sub)
+    expect(result).not.toBeNull()
+    const contents = result!.doc.rootBlockIds.map((id) => result!.doc.blocks[id].content)
+    expect(contents).toEqual(["A", "one", "two", "three", "C"])
+    // The replaced block is gone.
+    expect(result!.doc.blocks["b"]).toBeUndefined()
+    // lastId points at the final inserted block.
+    expect(result!.doc.blocks[result!.lastId].content).toBe("three")
+  })
+
+  it("re-parents the replaced block's children onto the last inserted block", () => {
+    const doc = fixture() // b has child b1
+    const sub = parse("x\ny")
+    const result = spliceBlocks(doc, "b", sub)!
+    expect(result.doc.blocks[result.lastId].content).toBe("y")
+    expect(result.doc.blocks[result.lastId].children).toContain("b1")
+  })
+
+  it("splices into a nested sibling list", () => {
+    const doc = fixture()
+    const sub = parse("p\nq")
+    const result = spliceBlocks(doc, "b1", sub)!
+    const childContents = result.doc.blocks["b"].children.map((id) => result.doc.blocks[id].content)
+    expect(childContents).toEqual(["p", "q"])
+  })
+
+  it("returns null for an unknown id or empty sub-doc", () => {
+    const doc = fixture()
+    expect(spliceBlocks(doc, "nope", parse("x"))).toBeNull()
+    expect(spliceBlocks(doc, "a", parse(""))).toBeNull()
   })
 })
 

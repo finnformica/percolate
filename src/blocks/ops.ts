@@ -67,6 +67,40 @@ function insertRelative(doc: BlockDoc, refId: string, block: Block, offset: 0 | 
   return next
 }
 
+/**
+ * Replace the block `id` with the blocks of `sub` (a freshly parsed doc), in
+ * order, at `id`'s position among its siblings. Any children of the replaced
+ * block are re-parented onto the last inserted block so nothing is lost. Used
+ * by paste, which parses the clipboard markdown into `sub`. Returns the new doc
+ * and the id of the last inserted block (to place the caret), or `null` if
+ * `id` is unknown or `sub` is empty.
+ */
+export function spliceBlocks(
+  doc: BlockDoc,
+  id: string,
+  sub: BlockDoc,
+): { doc: BlockDoc; lastId: string } | null {
+  const parentId = findParentId(doc, id)
+  if (parentId === undefined || sub.rootBlockIds.length === 0) return null
+  const next = clone(doc)
+  for (const [bid, block] of Object.entries(sub.blocks)) next.blocks[bid] = block
+
+  const lastId = sub.rootBlockIds[sub.rootBlockIds.length - 1]
+  const orphans = next.blocks[id]?.children ?? []
+  if (orphans.length > 0) {
+    const last = next.blocks[lastId]
+    next.blocks[lastId] = { ...last, children: [...last.children, ...orphans] }
+  }
+
+  const list = [...siblingList(next, parentId)]
+  list.splice(list.indexOf(id), 1, ...sub.rootBlockIds)
+  if (parentId === null) next.rootBlockIds = list
+  else next.blocks[parentId] = { ...next.blocks[parentId], children: list }
+  delete next.blocks[id]
+
+  return { doc: next, lastId }
+}
+
 function subtreeIds(doc: BlockDoc, id: string): string[] {
   const out: string[] = []
   const walk = (bid: string) => {

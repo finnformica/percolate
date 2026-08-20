@@ -183,6 +183,92 @@ await story("blockeditor--empty")
   check("redo restores an undone change", md.includes("AAA"))
 }
 
+// --- Pasting multi-line markdown populates separate blocks ---
+async function pasteText(text) {
+  await page.evaluate((t) => {
+    const el = document.activeElement
+    const dt = new DataTransfer()
+    dt.setData("text/plain", t)
+    el.dispatchEvent(
+      new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }),
+    )
+  }, text)
+}
+await story("blockeditor--empty")
+{
+  await page
+    .getByTestId("block-body")
+    .first()
+    .evaluate((el) => el.focus())
+  await page.keyboard.press("Enter") // edit the empty starter block
+  await page.locator("textarea").first().waitFor()
+  await pasteText("# Heading\n[ ] todo one\nplain paragraph\n- bullet")
+  await page.waitForTimeout(150)
+  await page.keyboard.press("Escape")
+  const md = await serialized()
+  check("paste → heading block", md.includes("# Heading"))
+  check("paste → todo block", md.includes("[ ] todo one"))
+  check("paste → paragraph block", md.includes("plain paragraph"))
+  check("paste → bullet block (not doubled)", md.includes("- bullet") && !md.includes("- - bullet"))
+  const bodies = await page.getByTestId("block-body").count()
+  check("paste created four separate blocks", bodies === 4, `blocks=${bodies}`)
+  await page.screenshot({ path: `${OUT}/06-paste.png` })
+}
+
+// --- Enter in the middle of a line moves the tail to the new block ---
+await story("blockeditor--empty")
+{
+  await page
+    .getByTestId("block-body")
+    .first()
+    .evaluate((el) => el.focus())
+  await page.keyboard.press("Enter")
+  await page.locator("textarea").first().waitFor()
+  await page.keyboard.type("helloworld")
+  for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowLeft") // caret: hello|world
+  await page.keyboard.press("Enter")
+  await page.waitForTimeout(120)
+  await page.keyboard.press("Escape")
+  const md = await serialized()
+  const helloAt = md.indexOf("hello")
+  const worldAt = md.indexOf("world")
+  check(
+    "Enter mid-line splits the tail into a new block",
+    helloAt !== -1 && worldAt !== -1 && helloAt < worldAt && !md.includes("helloworld"),
+    `hello@${helloAt} world@${worldAt}`,
+  )
+}
+
+// --- ArrowUp navigates within a wrapped block before leaving it ---
+await story("blockeditor--empty")
+{
+  await page
+    .getByTestId("block-body")
+    .first()
+    .evaluate((el) => el.focus())
+  await page.keyboard.press("Enter")
+  await page.locator("textarea").first().waitFor()
+  await page.keyboard.type("SHORT")
+  await page.keyboard.press("Enter") // a second block below
+  const longText = "wrap ".repeat(40).trim() // ~200 chars → wraps several lines
+  await page.keyboard.type(longText)
+  const ta = () => page.locator("textarea").first()
+
+  // One ArrowUp from the last visual line stays inside the wrapped block.
+  await page.keyboard.press("ArrowUp")
+  await page.waitForTimeout(50)
+  check("ArrowUp stays within a wrapped block", (await ta().inputValue()) === longText)
+
+  // Keep going up: eventually it leaves to the block above ("SHORT").
+  let left = false
+  for (let i = 0; i < 8 && !left; i++) {
+    await page.keyboard.press("ArrowUp")
+    await page.waitForTimeout(20)
+    left = (await ta().inputValue()) === "SHORT"
+  }
+  check("ArrowUp from the first visual line leaves the block", left)
+}
+
 // --- Keyboard navigation highlights, doesn't edit ---
 await story("blockeditor--mixed")
 await page.getByRole("button", { name: "Project ideas" }).click() // select first
