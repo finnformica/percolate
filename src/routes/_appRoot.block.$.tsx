@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { formatDistanceToNow } from "date-fns"
+import { useAtomValue } from "jotai"
+import { selectAtom } from "jotai/utils"
 import { Fragment, useCallback, useEffect, useState } from "react"
 import { parse } from "../blocks/parse"
 import { serialize } from "../blocks/serialize"
@@ -9,11 +11,24 @@ import { BlockEditor } from "../components/block-editor/block-editor"
 import { Button } from "../components/button"
 import { PageLayout } from "../components/page-layout"
 import { PropertyValue } from "../components/property-value"
+import { globalStateMachineAtom } from "../global-state"
 import { useNoteById, useSaveNote } from "../hooks/note"
 import type { Note } from "../schema"
 import { getVisibleFrontmatter } from "../utils/frontmatter"
 
+type RouteSearch = {
+  /** Initial content for a not-yet-created note (e.g. seeded frontmatter). */
+  content?: string
+}
+
+const isRepoClonedAtom = selectAtom(globalStateMachineAtom, (state) =>
+  state.matches("signedIn.cloned"),
+)
+
 export const Route = createFileRoute("/_appRoot/block/$")({
+  validateSearch: (search: Record<string, unknown>): RouteSearch => ({
+    content: typeof search.content === "string" ? search.content : undefined,
+  }),
   component: RouteComponent,
 })
 
@@ -61,16 +76,22 @@ function NoteMetadata({ note }: { note: Note }) {
 
 function RouteComponent() {
   const { _splat: noteId } = Route.useParams()
+  const { content: seedContent } = Route.useSearch()
   const note = useNoteById(noteId)
+  const isRepoCloned = useAtomValue(isRepoClonedAtom)
   const saveNote = useSaveNote()
 
   const [doc, setDoc] = useState<BlockDoc | null>(null)
   const [status, setStatus] = useState<"clean" | "dirty" | "saving" | "saved">("clean")
 
-  // Parse the note's markdown into blocks once, when it first loads.
+  // Parse the note into blocks once the repo has loaded. An existing note uses
+  // its own content; a not-yet-created note starts from the seed content (e.g.
+  // frontmatter for a brand-new note) or empty. Gating on the cloned repo means
+  // an undefined note is genuinely new, not merely still loading.
   useEffect(() => {
-    if (note && doc === null) setDoc(withStarterBlock(parse(note.content)))
-  }, [note, doc])
+    if (doc !== null || !isRepoCloned) return
+    setDoc(withStarterBlock(parse(note?.content ?? seedContent ?? "")))
+  }, [isRepoCloned, note, doc, seedContent])
 
   // Edits update the in-memory doc and mark it dirty — saving is explicit.
   const handleChange = (next: BlockDoc) => {
@@ -130,7 +151,7 @@ function RouteComponent() {
           <Link
             to="/notes/$"
             params={{ _splat: noteId ?? "" }}
-            search={{ mode: "read", query: undefined }}
+            search={{ mode: "read", query: undefined, classic: true }}
             className="link"
           >
             Open in classic editor

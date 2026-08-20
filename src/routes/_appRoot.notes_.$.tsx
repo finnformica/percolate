@@ -1,6 +1,6 @@
 import * as RadixSwitch from "@radix-ui/react-switch"
 import { Vim } from "@replit/codemirror-vim"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 import { ReactCodeMirrorRef } from "@uiw/react-codemirror"
 import copy from "copy-to-clipboard"
 import ejs from "ejs"
@@ -73,6 +73,8 @@ type RouteSearch = {
   query: string | undefined
   tasks?: string | undefined
   content?: string
+  /** When set, stay on the classic editor instead of redirecting to blocks. */
+  classic?: boolean
 }
 
 export const Route = createFileRoute("/_appRoot/notes_/$")({
@@ -82,6 +84,19 @@ export const Route = createFileRoute("/_appRoot/notes_/$")({
       query: typeof search.query === "string" ? search.query : undefined,
       tasks: typeof search.tasks === "string" ? search.tasks : undefined,
       content: typeof search.content === "string" ? search.content : undefined,
+      classic: search.classic === true || search.classic === "true" ? true : undefined,
+    }
+  },
+  // The block editor is the default note surface. Redirect here unless the
+  // caller explicitly asked for the classic editor (?classic), forwarding any
+  // seed content for a new note.
+  beforeLoad: ({ search, params }) => {
+    if (!search.classic) {
+      throw redirect({
+        to: "/block/$",
+        params: { _splat: params._splat },
+        search: { content: search.content },
+      })
     }
   },
   component: RouteComponent,
