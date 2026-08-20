@@ -22,7 +22,7 @@ type PropertyValueProps = {
   onChange?: (value: unknown) => void
 }
 
-function PropertyValue({ property: [key, value], onChange }: PropertyValueProps) {
+export function PropertyValue({ property: [key, value], onChange }: PropertyValueProps) {
   // Special keys
   switch (key) {
     case "isbn":
