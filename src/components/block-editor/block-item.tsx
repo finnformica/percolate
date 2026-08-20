@@ -12,15 +12,25 @@ export interface FocusRequest {
 
 export interface BlockEditorApi {
   focus: FocusRequest | null
-  setFocus: (focus: FocusRequest | null) => void
+  /** The highlighted block in select mode (null while editing or unfocused). */
+  selected: string | null
   collapsed: Set<string>
+  /** Highlight a block (leaves edit mode). */
+  select: (id: string) => void
+  /** Enter edit mode for a block. */
+  edit: (id: string, atStart?: boolean) => void
+  /** Leave edit mode and re-highlight the block. */
+  escapeEdit: (id: string) => void
+  /** Move the highlight to the previous/next visible block. */
+  moveSelection: (id: string, direction: "up" | "down") => void
   toggleCollapse: (id: string) => void
+  setFocus: (focus: FocusRequest | null) => void
   onContentChange: (id: string, content: string) => void
   onEnter: (id: string) => void
   onIndent: (id: string) => void
   onOutdent: (id: string) => void
   onBackspaceEmpty: (id: string) => void
-  /** Move editing focus to the previous/next block in visual order. */
+  /** While editing, move edit focus to the previous/next block. */
   onArrowUp: (id: string) => void
   onArrowDown: (id: string) => void
 }
@@ -59,9 +69,11 @@ export function BlockItem({
   api: BlockEditorApi
 }) {
   const editing = api.focus?.id === block.id
+  const selected = api.selected === block.id && !editing
   const hasChildren = block.children.length > 0
   const isCollapsed = api.collapsed.has(block.id)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const viewRef = useRef<HTMLDivElement>(null)
 
   const type = getBlockType(block.content)
   const body = stripMarker(block.content)
@@ -78,15 +90,24 @@ export function BlockItem({
     el.setSelectionRange(pos, pos)
   }, [editing, api.focus?.atStart])
 
+  // Give the block keyboard focus while it's the highlighted (selected) one, so
+  // arrow keys and Enter reach it.
+  useLayoutEffect(() => {
+    if (selected) viewRef.current?.focus()
+  }, [selected])
+
   const autoSize = (el: HTMLTextAreaElement) => {
     el.style.height = "auto"
     el.style.height = `${el.scrollHeight}px`
   }
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleEditKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault()
       api.onEnter(block.id)
+    } else if (event.key === "Escape") {
+      event.preventDefault()
+      api.escapeEdit(block.id)
     } else if (event.key === "Tab") {
       event.preventDefault()
       if (event.shiftKey) api.onOutdent(block.id)
@@ -98,8 +119,7 @@ export function BlockItem({
         api.onBackspaceEmpty(block.id)
       }
     } else if (event.key === "ArrowUp" && !event.shiftKey && !event.metaKey && !event.altKey) {
-      // Move to the previous block only when the caret is already on the first
-      // line; otherwise let the textarea handle in-block cursor movement.
+      // Move to the previous block only when the caret is on the first line.
       const el = event.currentTarget
       if (el.value.lastIndexOf("\n", el.selectionStart - 1) === -1) {
         event.preventDefault()
@@ -114,16 +134,30 @@ export function BlockItem({
     }
   }
 
+  const handleSelectKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault()
+      api.edit(block.id)
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault()
+      api.moveSelection(block.id, "up")
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault()
+      api.moveSelection(block.id, "down")
+    }
+  }
+
   return (
     <div>
       <div className="group flex items-start gap-1">
         <button
           type="button"
+          tabIndex={-1}
           aria-label={isCollapsed ? "Expand" : "Collapse"}
           onClick={() => api.toggleCollapse(block.id)}
           className={cx(
-            "mt-1 grid h-6 w-4 shrink-0 place-items-center rounded text-text-tertiary transition hover:bg-bg-secondary",
-            !hasChildren && "pointer-events-none opacity-0 group-hover:opacity-0",
+            "mt-0.5 grid size-5 shrink-0 place-items-center rounded-md text-text-tertiary transition hover:bg-bg-secondary",
+            !hasChildren && "pointer-events-none opacity-0",
             isCollapsed ? "rotate-0" : "rotate-90",
           )}
         >
@@ -143,28 +177,26 @@ export function BlockItem({
                 autoSize(event.currentTarget)
                 api.onContentChange(block.id, event.currentTarget.value)
               }}
-              onKeyDown={handleKeyDown}
+              onKeyDown={handleEditKeyDown}
               onBlur={() => api.setFocus(null)}
               className={cx(
-                "w-full resize-none border-none bg-transparent p-0 leading-relaxed text-text outline-none",
+                "w-full resize-none border-none bg-transparent p-0 font-content leading-relaxed text-text outline-none",
                 typo,
               )}
             />
           ) : (
             <div
+              ref={viewRef}
               role="button"
               tabIndex={0}
               className={cx(
-                "flex min-h-[1.6em] cursor-text items-start gap-2 outline-none",
+                "flex min-h-[1.6em] cursor-text items-start gap-2 rounded-sm px-1 outline-none",
+                selected && "bg-bg-secondary",
                 type.kind === "quote" && "border-l-2 border-border-secondary pl-3",
               )}
-              onClick={() => api.setFocus({ id: block.id })}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault()
-                  api.setFocus({ id: block.id })
-                }
-              }}
+              onClick={() => api.select(block.id)}
+              onDoubleClick={() => api.edit(block.id)}
+              onKeyDown={handleSelectKeyDown}
             >
               {type.kind === "todo" ? (
                 <input
@@ -195,7 +227,7 @@ export function BlockItem({
       </div>
 
       {hasChildren && !isCollapsed ? (
-        <div className="ml-[11px] border-l border-border-secondary pl-3">
+        <div className="ml-2.5 border-l border-border-secondary pl-3">
           {block.children.map((childId) => {
             const child = doc.blocks[childId]
             if (!child) return null

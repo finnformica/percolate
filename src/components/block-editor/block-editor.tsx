@@ -12,13 +12,16 @@ import { BlockItem, type BlockEditorApi, type FocusRequest } from "./block-item"
 
 /**
  * A controlled block outliner. `doc` is owned by the caller (which serializes
- * and saves it); this component manages only transient UI state (which block
- * is being edited, which are collapsed) and emits new docs via `onChange`.
+ * and saves it); this component manages only transient UI state and emits new
+ * docs via `onChange`.
  *
- * Each block's content is raw markdown, rendered per-block and edited in place
- * as a textarea (the Pensive approach). Because content *is* markdown, `# `,
- * `> `, `**bold**`, and `((block-ref))` all just work on render — no block
- * types or shortcuts needed.
+ * There are two modes, like Notion:
+ * - **select** — a block is highlighted; arrow keys move the highlight and
+ *   Enter (or a double-click) starts editing it. This is the default.
+ * - **edit** — a textarea is focused inside the block; Escape returns to
+ *   select, and arrows at the first/last line move to the adjacent block.
+ *
+ * Each block's content is raw markdown, rendered per-block and edited in place.
  */
 export function BlockEditor({
   doc,
@@ -28,10 +31,11 @@ export function BlockEditor({
   onChange: (doc: BlockDoc) => void
 }) {
   const [focus, setFocus] = useState<FocusRequest | null>(null)
+  const [selected, setSelected] = useState<string | null>(() => doc.rootBlockIds[0] ?? null)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
   // Blocks in the order they appear on screen (depth-first, skipping the
-  // children of collapsed blocks). Used for up/down arrow navigation.
+  // children of collapsed blocks). Used for up/down navigation.
   const visibleOrder = useMemo(() => {
     const order: string[] = []
     const walk = (ids: string[]) => {
@@ -46,10 +50,28 @@ export function BlockEditor({
     return order
   }, [doc, collapsed])
 
+  const select = (id: string) => {
+    setFocus(null)
+    setSelected(id)
+  }
+  const edit = (id: string, atStart = false) => {
+    setSelected(id)
+    setFocus({ id, atStart })
+  }
+
   const api: BlockEditorApi = {
     focus,
-    setFocus,
+    selected,
     collapsed,
+    select,
+    edit,
+    escapeEdit: (id) => select(id),
+    moveSelection: (id, direction) => {
+      const i = visibleOrder.indexOf(id)
+      if (i === -1) return
+      const next = direction === "up" ? i - 1 : i + 1
+      if (next >= 0 && next < visibleOrder.length) setSelected(visibleOrder[next])
+    },
     toggleCollapse: (id) =>
       setCollapsed((prev) => {
         const next = new Set(prev)
@@ -57,11 +79,12 @@ export function BlockEditor({
         else next.add(id)
         return next
       }),
+    setFocus,
     onContentChange: (id, content) => onChange(updateContent(doc, id, content)),
     onEnter: (id) => {
       const fresh = emptyBlock()
       onChange(insertAfter(doc, id, fresh))
-      setFocus({ id: fresh.id })
+      edit(fresh.id)
     },
     onIndent: (id) => {
       onChange(indentBlock(doc, id))
@@ -75,16 +98,15 @@ export function BlockEditor({
       if (doc.rootBlockIds.length === 1 && doc.rootBlockIds[0] === id) return
       const { doc: next, focusId } = removeBlock(doc, id)
       onChange(next)
-      if (focusId) setFocus({ id: focusId })
+      if (focusId) edit(focusId)
     },
     onArrowUp: (id) => {
       const i = visibleOrder.indexOf(id)
-      if (i > 0) setFocus({ id: visibleOrder[i - 1], atStart: false })
+      if (i > 0) edit(visibleOrder[i - 1], false)
     },
     onArrowDown: (id) => {
       const i = visibleOrder.indexOf(id)
-      if (i >= 0 && i < visibleOrder.length - 1)
-        setFocus({ id: visibleOrder[i + 1], atStart: true })
+      if (i >= 0 && i < visibleOrder.length - 1) edit(visibleOrder[i + 1], true)
     },
   }
 
