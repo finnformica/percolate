@@ -8,8 +8,9 @@ import {
   globalStateMachineAtom,
   isHelpPanelOpenAtom,
   notesAtom,
-  pinnedNotesAtom,
+  sortedNotesAtom,
 } from "../global-state"
+import type { Note } from "../schema"
 import { cx } from "../utils/cx"
 import { isValidDateString, isValidWeekString, toDateString } from "../utils/date"
 import {
@@ -20,6 +21,7 @@ import {
   NoteFillIcon16,
   NoteIcon16,
   OfflineIcon16,
+  PinFillIcon12,
   SettingsFillIcon16,
   SettingsIcon16,
   TagFillIcon16,
@@ -43,7 +45,7 @@ export function NavItems({
   size?: "medium" | "large"
   onNavigate?: () => void
 }) {
-  const pinnedNotes = useAtomValue(pinnedNotesAtom)
+  const notes = useAtomValue(sortedNotesAtom)
   const hasDailyNote = useAtomValue(hasDailyNoteAtom)
   const syncText = useSyncStatusText()
   const send = useSetAtom(globalStateMachineAtom)
@@ -128,34 +130,14 @@ export function NavItems({
               </>
             ) : null}
           </ul>
-          {pinnedNotes.length > 0 ? (
-            <div className="flex flex-col gap-1">
-              <div className="flex h-8 items-center px-2 text-sm text-text-secondary coarse:h-10 coarse:px-3">
-                Pinned
-              </div>
-              <ul className="flex flex-col gap-1">
-                {pinnedNotes.map((note) => (
-                  <li key={note.id} className="flex">
-                    <NavLink
-                      key={note.id}
-                      to="/notes/$"
-                      params={{ _splat: note.id }}
-                      search={{ mode: "read", query: undefined }}
-                      icon={
-                        <NoteFavicon
-                          note={note}
-                          className="epaper:[[aria-current=page]_&]:text-bg"
-                        />
-                      }
-                      className="w-0 flex-1"
-                      onNavigate={onNavigate}
-                    >
-                      {note.displayName}
-                    </NavLink>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {notes.length > 0 ? (
+            <ul className="flex flex-col gap-1">
+              {notes.map((note) => (
+                <li key={note.id} className="flex">
+                  <NoteNavItem note={note} size={size} onNavigate={onNavigate} />
+                </li>
+              ))}
+            </ul>
           ) : null}
         </div>
         <div className="flex flex-col gap-1">
@@ -247,6 +229,40 @@ function NavLink({
         {icon}
       </span>
       <span className="truncate">{children}</span>
+    </Link>
+  )
+}
+
+/** A note row in the sidebar list: favicon, an optional pin marker, and the
+ * note's display name. Pinned notes sort to the top (see sortedNotesAtom). */
+function NoteNavItem({
+  note,
+  size,
+  onNavigate,
+}: {
+  note: Note
+  size: "medium" | "large"
+  onNavigate?: () => void
+}) {
+  return (
+    <Link
+      to="/notes/$"
+      params={{ _splat: note.id }}
+      search={{ mode: "read", query: undefined }}
+      activeOptions={{ exact: true, includeSearch: false }}
+      data-size={size}
+      className="nav-item w-0 flex-1"
+      onClick={(event) => {
+        if (!event.defaultPrevented) onNavigate?.()
+      }}
+    >
+      <span className="flex shrink-0 text-text-secondary">
+        <NoteFavicon note={note} className="epaper:[[aria-current=page]_&]:text-bg" />
+      </span>
+      <span className="flex min-w-0 items-center gap-1.5">
+        {note.pinned ? <PinFillIcon12 className="shrink-0 text-text-pinned" /> : null}
+        <span className="truncate">{note.displayName}</span>
+      </span>
     </Link>
   )
 }
