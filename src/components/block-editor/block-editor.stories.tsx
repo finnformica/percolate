@@ -90,6 +90,50 @@ export const MarkdownShortcuts: Story = {
   },
 }
 
+/**
+ * Typing a marker at the start of an existing block switches its type,
+ * replacing whatever marker it had — a checkbox becomes a bullet, then an
+ * ordered item, then a heading.
+ */
+export const TypeSwitch: Story = {
+  args: { initial: "[ ] A task\n  id:: blk_sw\n" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+
+    // Starts as a todo with a checkbox.
+    expect(await canvas.findByRole("checkbox")).toBeInTheDocument()
+
+    // Edit it and type `- ` at the very start → bullet (no checkbox left).
+    await userEvent.click(canvas.getByText("A task"))
+    await userEvent.keyboard("{Enter}{Home}")
+    await userEvent.type(canvas.getByRole("textbox"), "- ")
+    await waitFor(() => {
+      const md = serialized(canvasElement)
+      expect(md).toContain("- A task")
+      expect(md).not.toContain("[ ] A task")
+    })
+    expect(canvas.queryByRole("checkbox")).not.toBeInTheDocument()
+
+    // `1. ` at the start → ordered item (bullet marker replaced).
+    await userEvent.keyboard("{Home}")
+    await userEvent.type(canvas.getByRole("textbox"), "1. ")
+    await waitFor(() => {
+      const md = serialized(canvasElement)
+      expect(md).toContain("1. A task")
+      expect(md).not.toContain("- A task")
+    })
+
+    // `# ` at the start → heading (ordered marker replaced).
+    await userEvent.keyboard("{Home}")
+    await userEvent.type(canvas.getByRole("textbox"), "# ")
+    await waitFor(() => {
+      const md = serialized(canvasElement)
+      expect(md).toContain("# A task")
+      expect(md).not.toContain("1. A task")
+    })
+  },
+}
+
 /** A todo shortcut renders an interactive checkbox. */
 export const TodoShortcut: Story = {
   args: { initial: "" },

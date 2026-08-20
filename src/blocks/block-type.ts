@@ -9,6 +9,7 @@ export type BlockType =
   | { kind: "todo"; checked: boolean }
   | { kind: "quote" }
   | { kind: "bullet" }
+  | { kind: "ordered"; number: number }
   | { kind: "paragraph" }
 
 const HEADING_RE = /^(#{1,6})\s+/
@@ -16,6 +17,8 @@ const HEADING_RE = /^(#{1,6})\s+/
 const TODO_RE = /^\[([ xX]?)\]\s+/
 const QUOTE_RE = /^>\s+/
 const BULLET_RE = /^[-*]\s+/
+// An ordered-list item: `1. `, `2) `, etc.
+const ORDERED_RE = /^(\d+)[.)]\s+/
 
 export function getBlockType(content: string): BlockType {
   const heading = HEADING_RE.exec(content)
@@ -27,10 +30,13 @@ export function getBlockType(content: string): BlockType {
   if (QUOTE_RE.test(content)) return { kind: "quote" }
   if (BULLET_RE.test(content)) return { kind: "bullet" }
 
+  const ordered = ORDERED_RE.exec(content)
+  if (ordered) return { kind: "ordered", number: Number(ordered[1]) }
+
   return { kind: "paragraph" }
 }
 
-/** The block's text with its leading marker (`# `, `- `, `[ ] `, `> `) removed. */
+/** The block's text with its leading marker (`# `, `- `, `[ ] `, `> `, `1. `) removed. */
 export function stripMarker(content: string): string {
   const type = getBlockType(content)
   switch (type.kind) {
@@ -42,9 +48,23 @@ export function stripMarker(content: string): string {
       return content.replace(QUOTE_RE, "")
     case "bullet":
       return content.replace(BULLET_RE, "")
+    case "ordered":
+      return content.replace(ORDERED_RE, "")
     default:
       return content
   }
+}
+
+/**
+ * The leading markdown marker (`# `, `- `, `[ ] `, `> `, `1. `) if `content`
+ * begins with one, otherwise `null`. Used to detect when a marker typed at the
+ * start of a block should switch the block to that type — the marker always
+ * requires a trailing space, so `#foo` or a bare `-` never triggers a switch.
+ */
+export function leadingMarker(content: string): string | null {
+  const type = getBlockType(content)
+  if (type.kind === "paragraph") return null
+  return content.slice(0, content.length - stripMarker(content).length)
 }
 
 /** Toggle a todo block's checkbox, returning the new content. */

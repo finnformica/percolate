@@ -2,7 +2,13 @@ import { useLayoutEffect, useRef } from "react"
 import type { ChangeEvent, KeyboardEvent } from "react"
 import { cx } from "../../utils/cx"
 import type { Block, BlockDoc } from "../../blocks/types"
-import { getBlockType, stripMarker, toggleTodo, type BlockType } from "../../blocks/block-type"
+import {
+  getBlockType,
+  leadingMarker,
+  stripMarker,
+  toggleTodo,
+  type BlockType,
+} from "../../blocks/block-type"
 import { IconButton } from "../icon-button"
 import { BlockContent } from "./block-content"
 
@@ -121,11 +127,16 @@ export function BlockItem({
     const el = event.currentTarget
     const newBody = el.value
     const caret = el.selectionStart
-    const newContent = prefix + newBody
+    // A marker typed at the very start of the body switches the block's type,
+    // *replacing* any current marker (checkbox → `- ` becomes a bullet, → `1. `
+    // an ordered item, → `# ` a heading, and so on). Otherwise the block keeps
+    // its existing marker and the edit is to its text.
+    const typed = leadingMarker(newBody)
+    const newContent = typed !== null ? newBody : prefix + newBody
     const derivedBody = stripMarker(newContent)
     if (derivedBody.length !== newBody.length) {
-      // A marker was extracted into (or merged out of) the prefix; keep the
-      // caret relative to the visible text.
+      // A marker moved into (or out of) the prefix; keep the caret relative to
+      // the visible text.
       pendingCaret.current = Math.max(0, caret - (newBody.length - derivedBody.length))
     }
     api.onContentChange(block.id, newContent)
@@ -134,12 +145,19 @@ export function BlockItem({
   const handleEditKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault()
-      const isList = type.kind === "bullet" || type.kind === "todo"
+      const isList = type.kind === "bullet" || type.kind === "todo" || type.kind === "ordered"
       if (isList && body.trim() === "") {
         // Enter on an empty list item exits the list (becomes a paragraph).
         api.onContentChange(block.id, "")
       } else {
-        const continuation = type.kind === "bullet" ? "- " : type.kind === "todo" ? "[ ] " : ""
+        const continuation =
+          type.kind === "bullet"
+            ? "- "
+            : type.kind === "todo"
+              ? "[ ] "
+              : type.kind === "ordered"
+                ? `${type.number + 1}. `
+                : ""
         api.onEnter(block.id, continuation)
       }
     } else if (event.key === "Escape") {
@@ -203,6 +221,13 @@ export function BlockItem({
     ) : type.kind === "bullet" ? (
       <span className="flex h-[1.625em] shrink-0 items-center">
         <span aria-hidden className="size-1.5 rounded-full bg-text-secondary" />
+      </span>
+    ) : type.kind === "ordered" ? (
+      <span
+        aria-hidden
+        className="flex h-[1.625em] shrink-0 items-center tabular-nums text-text-secondary"
+      >
+        {type.number}.
       </span>
     ) : null
 

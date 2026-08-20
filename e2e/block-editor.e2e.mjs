@@ -77,6 +77,29 @@ check("bullet NOT doubled", md.includes("- Bullet one") && !md.includes("- - Bul
 check("todo serialized", md.includes("[] A todo") || md.includes("[ ] A todo"))
 await page.screenshot({ path: `${OUT}/03-shortcuts.png` })
 
+// --- Typing a marker switches an existing block's type ---
+await story("blockeditor--mixed")
+{
+  const todo = page.getByRole("button", { name: "A todo" })
+  await todo.click()
+  await page.keyboard.press("Enter") // edit
+  await page.keyboard.press("Home")
+  await page.keyboard.type("- ")
+  await page.waitForTimeout(150)
+  let md = await serialized()
+  check(
+    "checkbox → bullet on '- '",
+    md.includes("- A todo") && !md.includes("[ ] A todo"),
+    md.includes("- A todo") ? "" : "no bullet",
+  )
+  await page.keyboard.press("Home")
+  await page.keyboard.type("# ")
+  await page.waitForTimeout(150)
+  md = await serialized()
+  check("bullet → heading on '# '", md.includes("# A todo") && !md.includes("- A todo"))
+  await page.screenshot({ path: `${OUT}/05-type-switch.png` })
+}
+
 // --- Keyboard navigation highlights, doesn't edit ---
 await story("blockeditor--mixed")
 await page.getByRole("button", { name: "Project ideas" }).click() // select first
