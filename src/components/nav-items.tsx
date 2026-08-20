@@ -142,7 +142,17 @@ export function NavItems({
         </div>
         <div className="flex flex-col gap-1">
           {needRefresh ? (
-            <button className="nav-item" data-size={size} onClick={() => updateServiceWorker(true)}>
+            <button
+              className="nav-item"
+              data-size={size}
+              onClick={() => {
+                // Apply the waiting service worker and reload to the new
+                // version. Fall back to a hard reload if the worker never
+                // takes over (so the button always refreshes the app).
+                void updateServiceWorker(true)
+                window.setTimeout(() => window.location.reload(), 3000)
+              }}
+            >
               <div className="grid size-4 place-items-center [&>*]:row-span-full [&>*]:col-span-full">
                 <div className="size-3 rounded-full bg-border-focus opacity-50 animate-ping" />
                 <div className="size-2 rounded-full bg-border-focus" />

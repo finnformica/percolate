@@ -39,7 +39,11 @@ export default defineConfig({
       workbox: {
         globPatterns: ["**/*.{html,css,js,woff2}"],
         ignoreURLParametersMatching: [/^utm_/, /^fbclid$/],
-        skipWaiting: true,
+        // No `skipWaiting` here: with registerType "prompt" the new service
+        // worker must *wait* until the user clicks "Update Ruminate", which
+        // posts SKIP_WAITING to the waiting worker and reloads. Auto-skipping
+        // would activate the worker on install, leaving nothing for the button
+        // to message — so the button would appear to do nothing.
         navigateFallback: "index.html",
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
         sourcemap: true,
