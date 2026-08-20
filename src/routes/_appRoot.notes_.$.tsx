@@ -1,6 +1,6 @@
 import * as RadixSwitch from "@radix-ui/react-switch"
 import { Vim } from "@replit/codemirror-vim"
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { ReactCodeMirrorRef } from "@uiw/react-codemirror"
 import copy from "copy-to-clipboard"
 import ejs from "ejs"
@@ -35,6 +35,7 @@ import {
   WidthFixedIcon16,
   WidthFullIcon16,
 } from "../components/icons"
+import { BlockNoteEditor } from "../components/block-editor/block-note-editor"
 import { InsertTemplateDialog, removeFrontmatterComments } from "../components/insert-template"
 import { LinkHighlightProvider } from "../components/link-highlight-provider"
 import { Markdown } from "../components/markdown"
@@ -73,8 +74,6 @@ type RouteSearch = {
   query: string | undefined
   tasks?: string | undefined
   content?: string
-  /** When set, stay on the classic editor instead of redirecting to blocks. */
-  classic?: boolean
 }
 
 export const Route = createFileRoute("/_appRoot/notes_/$")({
@@ -84,28 +83,6 @@ export const Route = createFileRoute("/_appRoot/notes_/$")({
       query: typeof search.query === "string" ? search.query : undefined,
       tasks: typeof search.tasks === "string" ? search.tasks : undefined,
       content: typeof search.content === "string" ? search.content : undefined,
-      classic: search.classic === true || search.classic === "true" ? true : undefined,
-    }
-  },
-  // The block editor is the default note surface. Redirect here unless the
-  // caller explicitly asked for the classic editor (?classic), forwarding any
-  // seed content for a new note. Daily/weekly (calendar) notes stay on the
-  // classic editor so their date navigation is preserved.
-  beforeLoad: ({ search, params }) => {
-    // Never redirect while a GitHub OAuth callback is in flight: the token
-    // params (user_token, …) ride on the raw URL and would be dropped by the
-    // redirect, breaking sign-in. Let the app consume them first.
-    if (typeof window !== "undefined" && window.location.search.includes("user_token")) {
-      return
-    }
-    const splat = params._splat ?? ""
-    const isCalendarNote = isValidDateString(splat) || isValidWeekString(splat)
-    if (!search.classic && !isCalendarNote) {
-      throw redirect({
-        to: "/block/$",
-        params: { _splat: params._splat },
-        search: { content: search.content },
-      })
     }
   },
   component: RouteComponent,
@@ -158,6 +135,9 @@ function NotePage() {
   const note = useNoteById(noteId)
   const isDailyNote = isValidDateString(noteId ?? "")
   const isWeeklyNote = isValidWeekString(noteId ?? "")
+  // Regular notes use the block editor; daily/weekly (calendar) notes keep the
+  // classic editor so their date navigation is preserved.
+  const useBlockEditor = !isDailyNote && !isWeeklyNote
   const searchNotes = useSearchNotes()
   const saveNote = useSaveNote()
   const backlinks = React.useMemo(() => {
@@ -416,7 +396,7 @@ function NotePage() {
       icon={<NoteFavicon note={parsedNote} />}
       actions={
         <div className="flex items-center gap-2">
-          {(!note && editorValue) || isDraft ? (
+          {useBlockEditor || (!note && editorValue) || isDraft ? (
             <Button
               disabled={isSignedOut}
               variant="primary"
@@ -429,62 +409,66 @@ function NotePage() {
             </Button>
           ) : null}
 
-          <SegmentedControl aria-label="Mode" size="small" className="hidden sm:flex">
-            {mode === "read" ? (
-              <SegmentedControl.Segment selected onClick={switchToReading}>
-                View
-              </SegmentedControl.Segment>
-            ) : (
-              <Tooltip>
-                <Tooltip.Trigger
-                  render={
-                    <SegmentedControl.Segment onClick={switchToReading}>
-                      View
-                    </SegmentedControl.Segment>
-                  }
-                />
-                <Tooltip.Content side="bottom" className="text-text-secondary">
-                  {toggleModeShortcut}
-                </Tooltip.Content>
-              </Tooltip>
-            )}
-            {mode === "write" ? (
-              <SegmentedControl.Segment selected onClick={switchToWriting}>
-                Edit
-              </SegmentedControl.Segment>
-            ) : (
-              <Tooltip>
-                <Tooltip.Trigger
-                  render={
-                    <SegmentedControl.Segment onClick={switchToWriting}>
-                      Edit
-                    </SegmentedControl.Segment>
-                  }
-                />
-                <Tooltip.Content side="bottom" className="text-text-secondary">
-                  {toggleModeShortcut}
-                </Tooltip.Content>
-              </Tooltip>
-            )}
-          </SegmentedControl>
+          {!useBlockEditor ? (
+            <SegmentedControl aria-label="Mode" size="small" className="hidden sm:flex">
+              {mode === "read" ? (
+                <SegmentedControl.Segment selected onClick={switchToReading}>
+                  View
+                </SegmentedControl.Segment>
+              ) : (
+                <Tooltip>
+                  <Tooltip.Trigger
+                    render={
+                      <SegmentedControl.Segment onClick={switchToReading}>
+                        View
+                      </SegmentedControl.Segment>
+                    }
+                  />
+                  <Tooltip.Content side="bottom" className="text-text-secondary">
+                    {toggleModeShortcut}
+                  </Tooltip.Content>
+                </Tooltip>
+              )}
+              {mode === "write" ? (
+                <SegmentedControl.Segment selected onClick={switchToWriting}>
+                  Edit
+                </SegmentedControl.Segment>
+              ) : (
+                <Tooltip>
+                  <Tooltip.Trigger
+                    render={
+                      <SegmentedControl.Segment onClick={switchToWriting}>
+                        Edit
+                      </SegmentedControl.Segment>
+                    }
+                  />
+                  <Tooltip.Content side="bottom" className="text-text-secondary">
+                    {toggleModeShortcut}
+                  </Tooltip.Content>
+                </Tooltip>
+              )}
+            </SegmentedControl>
+          ) : null}
           <div className="flex items-center">
-            <IconButton
-              aria-label="Attach file"
-              size="small"
-              onClick={() => {
-                const input = document.createElement("input")
-                input.type = "file"
-                input.onchange = (e) => {
-                  const file = (e.target as HTMLInputElement).files?.[0]
-                  if (file) {
-                    attachFile(file, editorRef.current?.view)
+            {!useBlockEditor ? (
+              <IconButton
+                aria-label="Attach file"
+                size="small"
+                onClick={() => {
+                  const input = document.createElement("input")
+                  input.type = "file"
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0]
+                    if (file) {
+                      attachFile(file, editorRef.current?.view)
+                    }
                   }
-                }
-                input.click()
-              }}
-            >
-              <PaperclipIcon16 />
-            </IconButton>
+                  input.click()
+                }}
+              >
+                <PaperclipIcon16 />
+              </IconButton>
+            ) : null}
             <IconButton
               aria-label={parsedNote?.pinned ? "Unpin" : "Pin"}
               size="small"
@@ -580,13 +564,6 @@ function NotePage() {
                 >
                   Open in GitHub
                 </DropdownMenu.Item>
-                <DropdownMenu.Item
-                  icon={<NoteIcon16 />}
-                  disabled={isSignedOut || !note}
-                  onClick={() => navigate({ to: "/block/$", params: { _splat: noteId ?? "" } })}
-                >
-                  Open in block editor
-                </DropdownMenu.Item>
                 <DropdownMenu.Item icon={<PrinterIcon16 />} onClick={() => window.print()}>
                   Print
                 </DropdownMenu.Item>
@@ -657,7 +634,7 @@ function NotePage() {
       }
       floatingActions={
         <div className="card-2 flex gap-1.5 coarse:gap-2 rounded-full! p-1.5 coarse:p-2 sm:hidden print:hidden">
-          {(!note && editorValue) || isDraft ? (
+          {useBlockEditor || (!note && editorValue) || isDraft ? (
             <Button
               disabled={isSignedOut}
               variant="primary"
@@ -715,81 +692,87 @@ function NotePage() {
               </div>
             ) : null}
 
-            {mode === "read" && (
-              <div className="min-h-[240px]">
-                {parsedNote?.frontmatter?.gist_id ? (
-                  <div className="mb-5 print:hidden">
-                    <PillButton
-                      className="pl-1 coarse:pl-2"
-                      onClick={() => setIsShareDialogOpen(true)}
+            {useBlockEditor ? (
+              <BlockNoteEditor key={noteId} value={editorValue} onChange={setEditorValue} />
+            ) : (
+              <>
+                {mode === "read" && (
+                  <div className="min-h-[240px]">
+                    {parsedNote?.frontmatter?.gist_id ? (
+                      <div className="mb-5 print:hidden">
+                        <PillButton
+                          className="pl-1 coarse:pl-2"
+                          onClick={() => setIsShareDialogOpen(true)}
+                        >
+                          <GlobeIcon16 className="text-border-focus" />
+                          Published
+                        </PillButton>
+                      </div>
+                    ) : null}
+                    {
+                      // When printing a daily or weekly note without a title,
+                      // insert the date or week number as the title
+                      (isDailyNote || isWeeklyNote) && !note?.title ? (
+                        <h1 className="mb-4 hidden font-content text-xl font-bold leading-[1.4] print:block">
+                          {isDailyNote
+                            ? formatDate(noteId ?? "", { alwaysIncludeYear: true })
+                            : formatWeek(noteId ?? "")}
+                        </h1>
+                      ) : null
+                    }
+                    <Markdown
+                      noteId={noteId}
+                      onChange={setEditorValue}
+                      emptyText={
+                        <>
+                          Empty note (double <span className="coarse:hidden">click</span>
+                          <span className="hidden coarse:inline">tap</span> to edit)
+                        </>
+                      }
                     >
-                      <GlobeIcon16 className="text-border-focus" />
-                      Published
-                    </PillButton>
+                      {editorValue}
+                    </Markdown>
                   </div>
-                ) : null}
-                {
-                  // When printing a daily or weekly note without a title,
-                  // insert the date or week number as the title
-                  (isDailyNote || isWeeklyNote) && !note?.title ? (
-                    <h1 className="mb-4 hidden font-content text-xl font-bold leading-[1.4] print:block">
-                      {isDailyNote
-                        ? formatDate(noteId ?? "", { alwaysIncludeYear: true })
-                        : formatWeek(noteId ?? "")}
-                    </h1>
-                  ) : null
-                }
-                <Markdown
-                  noteId={noteId}
-                  onChange={setEditorValue}
-                  emptyText={
-                    <>
-                      Empty note (double <span className="coarse:hidden">click</span>
-                      <span className="hidden coarse:inline">tap</span> to edit)
-                    </>
-                  }
+                )}
+                <div
+                  hidden={mode !== "write"}
+                  className={cx(
+                    "min-h-[240px]",
+                    isDraggingFile &&
+                      "rounded-sm outline-dashed outline-2 outline-offset-8 outline-border",
+                  )}
+                  onDragOver={(event) => {
+                    // Show visual feedback when dragging files
+                    if (event.dataTransfer.types.includes("Files")) {
+                      event.preventDefault()
+                      event.dataTransfer.dropEffect = "copy"
+                      setIsDraggingFile(true)
+                    }
+                  }}
+                  onDragLeave={() => {
+                    setIsDraggingFile(false)
+                  }}
+                  onDrop={(event) => {
+                    // Handle dropped files
+                    if (event.dataTransfer.files.length > 0) {
+                      event.preventDefault()
+                      const file = event.dataTransfer.files[0]
+                      attachFile(file, editorRef.current?.view)
+                    }
+                    setIsDraggingFile(false)
+                  }}
                 >
-                  {editorValue}
-                </Markdown>
-              </div>
+                  <NoteEditor
+                    ref={editorRef}
+                    defaultValue={editorValue}
+                    // eslint-disable-next-line jsx-a11y/no-autofocus
+                    autoFocus
+                    onChange={setEditorValue}
+                    minHeight={160}
+                  />
+                </div>
+              </>
             )}
-            <div
-              hidden={mode !== "write"}
-              className={cx(
-                "min-h-[240px]",
-                isDraggingFile &&
-                  "rounded-sm outline-dashed outline-2 outline-offset-8 outline-border",
-              )}
-              onDragOver={(event) => {
-                // Show visual feedback when dragging files
-                if (event.dataTransfer.types.includes("Files")) {
-                  event.preventDefault()
-                  event.dataTransfer.dropEffect = "copy"
-                  setIsDraggingFile(true)
-                }
-              }}
-              onDragLeave={() => {
-                setIsDraggingFile(false)
-              }}
-              onDrop={(event) => {
-                // Handle dropped files
-                if (event.dataTransfer.files.length > 0) {
-                  event.preventDefault()
-                  const file = event.dataTransfer.files[0]
-                  attachFile(file, editorRef.current?.view)
-                }
-                setIsDraggingFile(false)
-              }}
-            >
-              <NoteEditor
-                ref={editorRef}
-                defaultValue={editorValue}
-                // eslint-disable-next-line jsx-a11y/no-autofocus
-                autoFocus
-                onChange={setEditorValue}
-                minHeight={160}
-              />
-            </div>
             {isWeeklyNote ? (
               <Details className="print:hidden">
                 <Details.Summary>Days</Details.Summary>
