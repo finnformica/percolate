@@ -23,6 +23,7 @@ import {
   EditIcon16,
   ExternalLinkIcon16,
   GlobeIcon16,
+  LoadingIcon16,
   MoreIcon16,
   NoteIcon16,
   PaperclipIcon16,
@@ -46,6 +47,7 @@ import { PageLayout } from "../components/page-layout"
 import { PillButton } from "../components/pill-button"
 import { SegmentedControl } from "../components/segmented-control"
 import { ShareDialog } from "../components/share-dialog"
+import { isSyncingAtom } from "../components/sync-status"
 import { Tooltip } from "../components/tooltip"
 import {
   dailyTemplateAtom,
@@ -126,6 +128,7 @@ function NotePage() {
   // Global state
   const githubRepo = useAtomValue(githubRepoAtom)
   const isSignedOut = useAtomValue(isSignedOutAtom)
+  const isSyncing = useAtomValue(isSyncingAtom)
   const dailyTemplate = useAtomValue(dailyTemplateAtom)
   const weeklyTemplate = useAtomValue(weeklyTemplateAtom)
   const defaultFont = useAtomValue(defaultFontAtom)
@@ -398,14 +401,15 @@ function NotePage() {
         <div className="flex items-center gap-2">
           {useBlockEditor || (!note && editorValue) || isDraft ? (
             <Button
-              disabled={isSignedOut}
+              disabled={isSignedOut || isSyncing || !isDraft}
               variant="primary"
               size="small"
-              shortcut={["⌘", "S"]}
+              shortcut={isSyncing ? undefined : ["⌘", "S"]}
               onClick={() => handleSave(editorValue)}
-              className="hidden sm:flex"
+              className="hidden items-center gap-1.5 sm:flex"
             >
-              Save
+              {isSyncing ? <LoadingIcon16 className="animate-spin" /> : null}
+              {isSyncing ? "Saving…" : "Save"}
             </Button>
           ) : null}
 
@@ -636,13 +640,14 @@ function NotePage() {
         <div className="card-2 flex gap-1.5 coarse:gap-2 rounded-full! p-1.5 coarse:p-2 sm:hidden print:hidden">
           {useBlockEditor || (!note && editorValue) || isDraft ? (
             <Button
-              disabled={isSignedOut}
+              disabled={isSignedOut || isSyncing || !isDraft}
               variant="primary"
-              shortcut={["⌘", "S"]}
+              shortcut={isSyncing ? undefined : ["⌘", "S"]}
               onClick={() => handleSave(editorValue)}
-              className="coarse:h-12 rounded-full coarse:px-6"
+              className="coarse:h-12 items-center gap-1.5 rounded-full coarse:px-6"
             >
-              Save
+              {isSyncing ? <LoadingIcon16 className="animate-spin" /> : null}
+              {isSyncing ? "Saving…" : "Save"}
             </Button>
           ) : null}
           <RadixSwitch.Root
