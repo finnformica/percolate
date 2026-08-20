@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import type { KeyboardEvent } from "react"
 import type { BlockDoc } from "../../blocks/types"
 import {
   emptyBlock,
@@ -10,6 +11,7 @@ import {
   updateContent,
 } from "../../blocks/ops"
 import { BlockItem, type BlockEditorApi, type FocusRequest } from "./block-item"
+import { useBlockHistory } from "./use-block-history"
 
 /**
  * A controlled block outliner. `doc` is owned by the caller (which serializes
@@ -27,13 +29,17 @@ import { BlockItem, type BlockEditorApi, type FocusRequest } from "./block-item"
 export function BlockEditor({
   doc,
   onChange,
+  historyResetToken,
 }: {
   doc: BlockDoc
   onChange: (doc: BlockDoc) => void
+  /** Changes when the note is saved, collapsing the local undo history. */
+  historyResetToken?: unknown
 }) {
   const [focus, setFocus] = useState<FocusRequest | null>(null)
   const [selected, setSelected] = useState<string | null>(() => doc.rootBlockIds[0] ?? null)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const history = useBlockHistory(onChange, historyResetToken)
 
   // Blocks in the order they appear on screen (depth-first, skipping the
   // children of collapsed blocks). Used for up/down navigation.
@@ -60,6 +66,26 @@ export function BlockEditor({
     setFocus({ id, atStart })
   }
 
+  // After restoring a snapshot, keep editing/selecting the same block if it
+  // still exists; otherwise fall back to select mode on a valid block.
+  const reconcileToDoc = (restored: BlockDoc) => {
+    setFocus((cur) => (cur && restored.blocks[cur.id] ? cur : null))
+    setSelected((cur) => (cur && restored.blocks[cur] ? cur : (restored.rootBlockIds[0] ?? null)))
+  }
+
+  const undo = () => {
+    const restored = history.undo(doc)
+    if (!restored) return false
+    reconcileToDoc(restored)
+    return true
+  }
+  const redo = () => {
+    const restored = history.redo(doc)
+    if (!restored) return false
+    reconcileToDoc(restored)
+    return true
+  }
+
   const api: BlockEditorApi = {
     focus,
     selected,
@@ -81,29 +107,30 @@ export function BlockEditor({
         return next
       }),
     setFocus,
-    onContentChange: (id, content) => onChange(updateContent(doc, id, content)),
+    onContentChange: (id, content) =>
+      history.commit(doc, updateContent(doc, id, content), { type: "text", blockId: id }),
     onEnter: (id, initial = "") => {
       const fresh = emptyBlock(initial)
-      onChange(insertAfter(doc, id, fresh))
+      history.commit(doc, insertAfter(doc, id, fresh), { type: "structural" })
       edit(fresh.id)
     },
     onEnterBefore: (id, initial = "") => {
       const fresh = emptyBlock(initial)
-      onChange(insertBefore(doc, id, fresh))
+      history.commit(doc, insertBefore(doc, id, fresh), { type: "structural" })
       edit(fresh.id)
     },
     onIndent: (id) => {
-      onChange(indentBlock(doc, id))
+      history.commit(doc, indentBlock(doc, id), { type: "structural" })
       setFocus({ id })
     },
     onOutdent: (id) => {
-      onChange(outdentBlock(doc, id))
+      history.commit(doc, outdentBlock(doc, id), { type: "structural" })
       setFocus({ id })
     },
     onBackspaceEmpty: (id) => {
       if (doc.rootBlockIds.length === 1 && doc.rootBlockIds[0] === id) return
       const { doc: next, focusId } = removeBlock(doc, id)
-      onChange(next)
+      history.commit(doc, next, { type: "structural" })
       if (focusId) edit(focusId)
     },
     onArrowUp: (id) => {
@@ -116,8 +143,22 @@ export function BlockEditor({
     },
   }
 
+  // Cmd/Ctrl+Z undoes, Cmd/Ctrl+Shift+Z (or Ctrl+Y) redoes — at the document
+  // level, overriding the browser's per-textarea native undo so a single
+  // keystroke can walk back changes that spanned multiple blocks.
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!(event.metaKey || event.ctrlKey)) return
+    const key = event.key.toLowerCase()
+    if (key === "z" && !event.shiftKey) {
+      if (undo()) event.preventDefault()
+    } else if ((key === "z" && event.shiftKey) || key === "y") {
+      if (redo()) event.preventDefault()
+    }
+  }
+
   return (
-    <div className="space-y-0.5">
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+    <div className="space-y-0.5" onKeyDown={handleKeyDown}>
       {doc.rootBlockIds.map((id) => {
         const block = doc.blocks[id]
         if (!block) return null

@@ -119,6 +119,40 @@ await story("blockeditor--mixed")
   )
 }
 
+// --- Undo works across blocks (the browser's per-textarea undo can't) ---
+await story("blockeditor--empty")
+{
+  const mod = process.platform === "darwin" ? "Meta" : "Control"
+  await page
+    .getByTestId("block-body")
+    .first()
+    .evaluate((el) => el.focus())
+  await page.keyboard.press("Enter") // edit the empty starter block
+  await page.locator("textarea").first().waitFor()
+  await page.keyboard.type("AAA")
+  await page.keyboard.press("Enter") // new block below
+  await page.keyboard.type("BBB")
+  await page.waitForTimeout(120)
+  let md = await serialized()
+  check("two blocks present before undo", md.includes("AAA") && md.includes("BBB"))
+
+  await page.keyboard.press(`${mod}+z`) // undo the "BBB" text run
+  await page.waitForTimeout(120)
+  md = await serialized()
+  check("undo removes the second block's text", md.includes("AAA") && !md.includes("BBB"))
+
+  await page.keyboard.press(`${mod}+z`) // undo the Enter (structural)
+  await page.keyboard.press(`${mod}+z`) // undo the "AAA" text run
+  await page.waitForTimeout(120)
+  md = await serialized()
+  check("undo walks back across blocks to empty", !md.includes("AAA") && !md.includes("BBB"))
+
+  await page.keyboard.press(`${mod}+Shift+z`) // redo the "AAA" run
+  await page.waitForTimeout(120)
+  md = await serialized()
+  check("redo restores an undone change", md.includes("AAA"))
+}
+
 // --- Keyboard navigation highlights, doesn't edit ---
 await story("blockeditor--mixed")
 await page.getByRole("button", { name: "Project ideas" }).click() // select first
