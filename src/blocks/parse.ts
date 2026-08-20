@@ -9,58 +9,72 @@ interface ParsedNode {
   children: ParsedNode[]
 }
 
-const BULLET_RE = /^(\s*)-\s?(.*)$/
-const ID_RE = /^\s*id::\s+(.+)\s*$/
+const ID_RE = /^\s*id::\s+(.+)$/
 
 /**
- * Parse Logseq-style markdown into a BlockDoc.
+ * Parse markdown into a BlockDoc.
  *
  * - Frontmatter (a leading `---` … `---` block) is preserved verbatim.
- * - Outline bullets (`- …`, nested by two-space indentation) become blocks.
- * - An `id::` line attaches its id to the block above it; blocks without one
- *   are minted a fresh id (so plain/imported markdown gains stable ids on the
- *   next save).
- * - Any non-bullet, non-`id::` line is treated as a top-level block whose
- *   content is that line (best-effort import of non-outline notes).
+ * - Every non-blank, non-`id::` line is a block; its content is written
+ *   verbatim (a bullet keeps its `- `, a heading its `# `, a paragraph nothing)
+ *   and nesting comes from two-space indentation.
+ * - An `id::` line immediately after a block attaches its id to that block;
+ *   blocks without one are minted a fresh id (so plain/imported markdown gains
+ *   stable ids on the next save).
  */
 export function parse(markdown: string): BlockDoc {
-  // Normalize line endings up front so Windows/GitHub CRLF never leaks into a
-  // block's content or an `id::` value (which would break refs and round-trip).
+  // Normalize line endings so Windows/GitHub CRLF never leaks into content/ids.
   const { frontmatter, body } = splitFrontmatter(markdown.replace(/\r\n/g, "\n"))
   const lines = body.split("\n")
+  // Drop the single trailing empty line produced by the final newline.
+  if (lines.length > 0 && lines[lines.length - 1] === "") lines.pop()
 
   const roots: ParsedNode[] = []
   // Stack of open nodes with their indentation depth, nearest-last.
   const stack: { depth: number; node: ParsedNode }[] = []
-  let last: ParsedNode | null = null
 
-  for (const raw of lines) {
-    if (raw.trim() === "") continue
+  const insert = (depth: number, node: ParsedNode) => {
+    while (stack.length > 0 && stack[stack.length - 1].depth >= depth) stack.pop()
+    if (stack.length === 0) roots.push(node)
+    else stack[stack.length - 1].node.children.push(node)
+    stack.push({ depth, node })
+  }
 
-    const idMatch = raw.match(ID_RE)
-    if (idMatch && last) {
-      last.fileId = idMatch[1].trim()
+  let i = 0
+  while (i < lines.length) {
+    const line = lines[i]
+    if (line.trim() === "") {
+      i += 1
       continue
     }
 
-    const bulletMatch = raw.match(BULLET_RE)
-    if (bulletMatch) {
-      const depth = Math.floor(bulletMatch[1].length / 2)
-      const node: ParsedNode = { content: bulletMatch[2], children: [] }
-      while (stack.length > 0 && stack[stack.length - 1].depth >= depth) {
-        stack.pop()
-      }
-      if (stack.length === 0) roots.push(node)
-      else stack[stack.length - 1].node.children.push(node)
-      stack.push({ depth, node })
-      last = node
-    } else {
-      // Non-outline line: treat as a standalone top-level block.
-      const node: ParsedNode = { content: raw.trim(), children: [] }
-      roots.push(node)
-      stack.length = 0
-      last = node
+    const indent = line.length - line.trimStart().length
+
+    const idMatch = ID_RE.exec(line)
+    if (idMatch) {
+      // Reached an `id::` line directly — the block's content line was empty.
+      // The id sits two spaces deeper than its (empty) content line.
+      const depth = Math.max(0, Math.floor((indent - 2) / 2))
+      insert(depth, { content: "", children: [], fileId: idMatch[1].trim() })
+      i += 1
+      continue
     }
+
+    const content = line.slice(indent)
+    const depth = Math.floor(indent / 2)
+    const node: ParsedNode = { content, children: [] }
+
+    // An `id::` line immediately after belongs to this block.
+    const next = i + 1 < lines.length ? lines[i + 1] : undefined
+    const nextId = next !== undefined ? ID_RE.exec(next) : null
+    if (nextId) {
+      node.fileId = nextId[1].trim()
+      i += 2
+    } else {
+      i += 1
+    }
+
+    insert(depth, node)
   }
 
   const blocks: Record<string, Block> = {}

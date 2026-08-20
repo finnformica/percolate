@@ -1,19 +1,25 @@
 import type { Block, BlockDoc } from "./types"
 
 /**
- * Serialize a BlockDoc to Logseq-style markdown — the canonical on-disk form
- * that gets committed to the GitHub repo.
+ * Serialize a BlockDoc to markdown — the canonical on-disk form committed to
+ * the GitHub repo.
  *
  *   ---
  *   title: My note
  *   ---
- *   - A block
+ *   # A heading
  *     id:: blk_abc
- *     - A nested block
- *       id:: blk_def
+ *   - A bullet
+ *     id:: blk_def
+ *   A plain paragraph
+ *     id:: blk_ghi
  *
- * Indentation is two spaces per depth; each block's id is written as an
- * `id::` property line directly beneath its content.
+ * Each block's content is written *directly* (so a bullet keeps its single
+ * `- `, a paragraph has no marker, a heading keeps `# `), followed by an
+ * `id::` line indented two spaces further. Nesting is two spaces of indent per
+ * depth. Writing the content verbatim — rather than wrapping every block in a
+ * `- ` outline marker — keeps the markdown clean and lets blocks be real
+ * paragraphs/headings, not just list items.
  */
 export function serialize(doc: BlockDoc): string {
   const lines: string[] = []
@@ -28,7 +34,8 @@ export function serialize(doc: BlockDoc): string {
     const block: Block | undefined = doc.blocks[id]
     if (!block) return
     const indent = "  ".repeat(depth)
-    lines.push(block.content ? `${indent}- ${block.content}` : `${indent}-`)
+    // The content line (empty content → just the indent, so depth is preserved).
+    lines.push(`${indent}${block.content}`)
     lines.push(`${indent}  id:: ${block.id}`)
     for (const childId of block.children) walk(childId, depth + 1)
   }
