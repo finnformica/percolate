@@ -1,7 +1,7 @@
 import yaml from "yamljs"
 
 /** Reserved frontmatter keys that are not displayed to users */
-export const RESERVED_FRONTMATTER_KEYS = ["pinned", "gist_id", "font", "width", "updated_at"]
+const RESERVED_FRONTMATTER_KEYS = ["pinned", "gist_id", "font", "width", "updated_at"]
 
 /** Checks if a frontmatter entry is visible to users */
 function isVisibleFrontmatterEntry([key, value]: [string, unknown]): boolean {

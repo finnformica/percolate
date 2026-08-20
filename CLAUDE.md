@@ -99,6 +99,7 @@ Lumen is a simple note-taking web application built with React and TypeScript. I
 
 - Run `npm run format` to format code
 - Run `npm run lint` to check for errors
+- Run `npm run knip` to check for dead code (unused files, dependencies, exports)
 
 ### Git Integration
 

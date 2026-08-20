@@ -13,7 +13,7 @@ export function testNoteFilters(filters: Filter[], note: Note) {
   return filters.every((filter) => testNoteFilter(filter, note))
 }
 
-export function testNoteFilter(filter: Filter, note: Note) {
+function testNoteFilter(filter: Filter, note: Note) {
   const frontmatter = note.frontmatter
 
   let value = false

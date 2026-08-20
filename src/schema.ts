@@ -67,14 +67,12 @@ export const githubUserSchema = z.object({
 
 export type GitHubUser = z.infer<typeof githubUserSchema>
 
-export const templateInputSchema = z.object({
+const templateInputSchema = z.object({
   type: z.literal("string"),
   required: z.boolean().optional(),
   default: z.string().optional(),
   description: z.string().optional(),
 })
-
-export type TemplateInput = z.infer<typeof templateInputSchema>
 
 export const templateSchema = z.object({
   name: z.string(),

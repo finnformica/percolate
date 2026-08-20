@@ -28,7 +28,7 @@ type Item = {
   onSelect: () => void
 }
 
-export function NotePicker({
+function NotePicker({
   placeholder = "Search…",
   size = "small",
   exclude = [],

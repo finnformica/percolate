@@ -5,7 +5,7 @@ type LinkHighlightProviderProps = {
   children?: React.ReactNode
 }
 
-export const LinkHighlightContext = React.createContext<string[]>([])
+const LinkHighlightContext = React.createContext<string[]>([])
 
 export function LinkHighlightProvider({ href, children }: LinkHighlightProviderProps) {
   const inheritedHrefs = useLinkHighlight()

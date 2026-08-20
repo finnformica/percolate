@@ -85,6 +85,7 @@ npm run build        # tsc + vite build
 npm run deploy       # build + wrangler deploy
 npm run check:worker # typecheck the Worker
 npm run lint         # eslint
+npm run knip         # dead-code check (unused files, deps, exports)
 npm run format       # prettier --write
 npm run test         # vitest
 ```

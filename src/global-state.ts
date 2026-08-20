@@ -773,26 +773,6 @@ export const tagSearcherAtom = atom((get) => {
 })
 
 // -----------------------------------------------------------------------------
-// Dates
-// -----------------------------------------------------------------------------
-
-export const datesAtom = atom((get) => {
-  const notes = get(notesAtom)
-  const dates: Record<string, NoteId[]> = {}
-
-  for (const note of notes.values()) {
-    for (const date of note.dates) {
-      // If the date doesn't exist, create it
-      if (!dates[date]) dates[date] = []
-      // If the note isn't already linked to the date, link it
-      if (!dates[date].includes(note.id)) dates[date].push(note.id)
-    }
-  }
-
-  return dates
-})
-
-// -----------------------------------------------------------------------------
 // Templates
 // -----------------------------------------------------------------------------
 
@@ -828,23 +808,6 @@ export const dailyTemplateAtom = selectAtom(templatesAtom, (templates) =>
 export const weeklyTemplateAtom = selectAtom(templatesAtom, (templates) =>
   Object.values(templates).find((t) => t.name.match(/^weekly$/i)),
 )
-
-// -----------------------------------------------------------------------------
-// Tasks
-// -----------------------------------------------------------------------------
-
-export const tasksAtom = atom((get) => {
-  const notes = get(notesAtom)
-  return [...notes.values()].flatMap((note) => note.tasks.map((task) => ({ ...task, note })))
-})
-
-export const taskSearcherAtom = atom((get) => {
-  const tasks = get(tasksAtom)
-  return new Searcher(tasks, {
-    keySelector: (task) => [task.text, task.note.title, task.note.displayName],
-    threshold: 0.8,
-  })
-})
 
 // -----------------------------------------------------------------------------
 // UI state

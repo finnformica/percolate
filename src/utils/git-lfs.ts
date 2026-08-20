@@ -133,7 +133,7 @@ export async function uploadToGitLfsServer({
 }
 
 /** Get the OID of a file by hashing its contents with SHA-256 */
-export async function getOid(content: ArrayBuffer) {
+async function getOid(content: ArrayBuffer) {
   // Reference: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest
   const hashBuffer = await crypto.subtle.digest("SHA-256", content)
   const hashArray = Array.from(new Uint8Array(hashBuffer))

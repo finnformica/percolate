@@ -1,6 +1,6 @@
 import React from "react"
 
-export const THEME_COLOR_VAR = "--color-bg"
+const THEME_COLOR_VAR = "--color-bg"
 
 /** Dynamically change the theme color */
 export function useThemeColor() {

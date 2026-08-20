@@ -1,4 +1,3 @@
-import { toast as sonnerToast } from "sonner"
 import { cx } from "../utils/cx"
 
 type ToastProps = {
@@ -15,8 +14,4 @@ export function Toast({ children, icon }: ToastProps) {
       <span className="text-pretty">{children}</span>
     </div>
   )
-}
-
-export function toast({ message, icon }: { message: React.ReactNode; icon?: React.ReactNode }) {
-  return sonnerToast.custom(() => <Toast icon={icon}>{message}</Toast>)
 }

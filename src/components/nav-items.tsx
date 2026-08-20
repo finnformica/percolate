@@ -244,7 +244,7 @@ function NavLink({
   )
 }
 
-export function HelpNavItem({ size }: { size: "medium" | "large" }) {
+function HelpNavItem({ size }: { size: "medium" | "large" }) {
   const [isOpen, setIsOpen] = useAtom(isHelpPanelOpenAtom)
   return (
     <button

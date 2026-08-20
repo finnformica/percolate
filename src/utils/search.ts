@@ -7,7 +7,7 @@ export type Filter = {
   exclude: boolean
 }
 
-export type SortDirection = "asc" | "desc"
+type SortDirection = "asc" | "desc"
 
 export type Sort = {
   key: string
