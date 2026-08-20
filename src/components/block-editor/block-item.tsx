@@ -35,12 +35,28 @@ export interface BlockEditorApi {
   onContentChange: (id: string, content: string) => void
   /** Insert a new block after `id`, optionally pre-filled (e.g. a list marker). */
   onEnter: (id: string, initial?: string) => void
+  /** Insert a new block before `id`, optionally pre-filled (e.g. a list marker). */
+  onEnterBefore: (id: string, initial?: string) => void
   onIndent: (id: string) => void
   onOutdent: (id: string) => void
   onBackspaceEmpty: (id: string) => void
   /** While editing, move edit focus to the previous/next block. */
   onArrowUp: (id: string) => void
   onArrowDown: (id: string) => void
+}
+
+/** The marker a new sibling block should carry to continue a list. */
+function continuationMarker(type: BlockType): string {
+  switch (type.kind) {
+    case "bullet":
+      return "- "
+    case "todo":
+      return "[ ] "
+    case "ordered":
+      return `${type.number + 1}. `
+    default:
+      return ""
+  }
 }
 
 /** Typography shared by a block's rendered view and its edit textarea, so
@@ -143,22 +159,20 @@ export function BlockItem({
   }
 
   const handleEditKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (event.key === "Enter" && event.shiftKey) {
+      // Shift-Enter inserts a fresh block *above* the current one (same list
+      // style), rather than a soft line break — the file format is one block
+      // per line, so in-block newlines aren't representable anyway.
+      event.preventDefault()
+      api.onEnterBefore(block.id, continuationMarker(type))
+    } else if (event.key === "Enter") {
       event.preventDefault()
       const isList = type.kind === "bullet" || type.kind === "todo" || type.kind === "ordered"
       if (isList && body.trim() === "") {
         // Enter on an empty list item exits the list (becomes a paragraph).
         api.onContentChange(block.id, "")
       } else {
-        const continuation =
-          type.kind === "bullet"
-            ? "- "
-            : type.kind === "todo"
-              ? "[ ] "
-              : type.kind === "ordered"
-                ? `${type.number + 1}. `
-                : ""
-        api.onEnter(block.id, continuation)
+        api.onEnter(block.id, continuationMarker(type))
       }
     } else if (event.key === "Escape") {
       event.preventDefault()

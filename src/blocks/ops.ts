@@ -42,16 +42,26 @@ export function updateContent(doc: BlockDoc, id: string, content: string): Block
 
 /** Insert `block` as a sibling immediately after `refId`. */
 export function insertAfter(doc: BlockDoc, refId: string, block: Block): BlockDoc {
+  return insertRelative(doc, refId, block, 1)
+}
+
+/** Insert `block` as a sibling immediately before `refId`. */
+export function insertBefore(doc: BlockDoc, refId: string, block: Block): BlockDoc {
+  return insertRelative(doc, refId, block, 0)
+}
+
+/** Splice `block` into `refId`'s sibling list at `refIndex + offset`. */
+function insertRelative(doc: BlockDoc, refId: string, block: Block, offset: 0 | 1): BlockDoc {
   const parentId = findParentId(doc, refId)
   if (parentId === undefined) return doc
   const next = clone(doc)
   next.blocks[block.id] = block
   if (parentId === null) {
     const i = next.rootBlockIds.indexOf(refId)
-    next.rootBlockIds.splice(i + 1, 0, block.id)
+    next.rootBlockIds.splice(i + offset, 0, block.id)
   } else {
     const parent = { ...next.blocks[parentId], children: [...next.blocks[parentId].children] }
-    parent.children.splice(parent.children.indexOf(refId) + 1, 0, block.id)
+    parent.children.splice(parent.children.indexOf(refId) + offset, 0, block.id)
     next.blocks[parentId] = parent
   }
   return next

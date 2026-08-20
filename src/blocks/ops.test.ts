@@ -3,6 +3,7 @@ import {
   emptyBlock,
   indentBlock,
   insertAfter,
+  insertBefore,
   outdentBlock,
   removeBlock,
   updateContent,
@@ -94,6 +95,34 @@ describe("insertAfter", () => {
   it("returns the same doc for an unknown refId", () => {
     const doc = fixture()
     expect(insertAfter(doc, "nope", { id: "x", content: "", children: [] })).toBe(doc)
+  })
+})
+
+describe("insertBefore", () => {
+  it("inserts a sibling before a root block", () => {
+    const doc = fixture()
+    const fresh = { id: "x", content: "X", children: [] }
+    const next = insertBefore(doc, "b", fresh)
+    expect(next.rootBlockIds).toEqual(["a", "x", "b", "c"])
+    // Original untouched.
+    expect(doc.rootBlockIds).toEqual(["a", "b", "c"])
+  })
+
+  it("inserts before the first child of a parent", () => {
+    const doc = fixture()
+    const fresh = { id: "b0", content: "B0", children: [] }
+    const next = insertBefore(doc, "b1", fresh)
+    expect(next.blocks["b"].children).toEqual(["b0", "b1"])
+  })
+
+  it("prepends when inserting before the first sibling", () => {
+    const next = insertBefore(fixture(), "a", { id: "x", content: "X", children: [] })
+    expect(next.rootBlockIds).toEqual(["x", "a", "b", "c"])
+  })
+
+  it("returns the same doc for an unknown refId", () => {
+    const doc = fixture()
+    expect(insertBefore(doc, "nope", { id: "x", content: "", children: [] })).toBe(doc)
   })
 })
 

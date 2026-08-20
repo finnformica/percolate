@@ -4,6 +4,7 @@ import {
   emptyBlock,
   indentBlock,
   insertAfter,
+  insertBefore,
   outdentBlock,
   removeBlock,
   updateContent,
@@ -84,6 +85,11 @@ export function BlockEditor({
     onEnter: (id, initial = "") => {
       const fresh = emptyBlock(initial)
       onChange(insertAfter(doc, id, fresh))
+      edit(fresh.id)
+    },
+    onEnterBefore: (id, initial = "") => {
+      const fresh = emptyBlock(initial)
+      onChange(insertBefore(doc, id, fresh))
       edit(fresh.id)
     },
     onIndent: (id) => {

@@ -100,6 +100,25 @@ await story("blockeditor--mixed")
   await page.screenshot({ path: `${OUT}/05-type-switch.png` })
 }
 
+// --- Shift-Enter inserts a new block *above* the current one ---
+await story("blockeditor--mixed")
+{
+  const bullet = page.getByRole("button", { name: "A bullet point" })
+  await bullet.click()
+  await page.keyboard.press("Enter") // edit
+  await page.keyboard.press("Shift+Enter") // insert a bullet above, now editing it
+  await page.keyboard.type("ABOVE")
+  await page.waitForTimeout(150)
+  const md = await serialized()
+  const aboveAt = md.indexOf("ABOVE")
+  const bulletAt = md.indexOf("A bullet point")
+  check(
+    "Shift-Enter inserts above",
+    aboveAt !== -1 && bulletAt !== -1 && aboveAt < bulletAt,
+    `above@${aboveAt} bullet@${bulletAt}`,
+  )
+}
+
 // --- Keyboard navigation highlights, doesn't edit ---
 await story("blockeditor--mixed")
 await page.getByRole("button", { name: "Project ideas" }).click() // select first
