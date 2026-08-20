@@ -56,33 +56,11 @@ export default defineConfig({
     nodePolyfills(),
   ],
   build: {
-    // CodeMirror and the full markdown/unified stack are legitimately large;
-    // 500 kB is unrealistic for an editor app. The vendors are split below for
-    // caching, and this raises the warning threshold to a sane value.
-    chunkSizeWarningLimit: 1000,
-    rollupOptions: {
-      output: {
-        // Split heavy vendors into their own chunks so the main bundle stays
-        // smaller and third-party code is cached independently of app code.
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return
-          if (
-            /[\\/](@codemirror|@uiw|@lezer|@replit[\\/]codemirror-vim|codemirror|prismjs)[\\/]/.test(
-              id,
-            )
-          )
-            return "codemirror"
-          if (
-            /[\\/](unified|remark-[^\\/]+|rehype-[^\\/]+|mdast[^\\/]*|micromark[^\\/]*|hast[^\\/]*|katex|refractor|property-information|vfile[^\\/]*|unist[^\\/]*|character-entities[^\\/]*|decode-named-character-reference)[\\/]/.test(
-              id,
-            )
-          )
-            return "markdown"
-          if (/[\\/](react|react-dom|scheduler|@tanstack|jotai|xstate)[\\/]/.test(id))
-            return "react"
-          return "vendor"
-        },
-      },
-    },
+    // This is a rich editor app (CodeMirror + the full markdown/unified stack),
+    // so the bundle is legitimately large. Raise the size-warning threshold
+    // rather than manually splitting vendors: separating React into its own
+    // chunk broke module init order at runtime (React resolved to undefined).
+    // Route-level lazy-loading is the safer optimization to revisit later.
+    chunkSizeWarningLimit: 3500,
   },
 })
