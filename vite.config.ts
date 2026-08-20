@@ -55,4 +55,29 @@ export default defineConfig({
     // https://github.com/isomorphic-git/isomorphic-git/issues/1753
     nodePolyfills(),
   ],
+  build: {
+    // CodeMirror and the full markdown/unified stack are legitimately large;
+    // 500 kB is unrealistic for an editor app. The vendors are split below for
+    // caching, and this raises the warning threshold to a sane value.
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        // Split heavy vendors into their own chunks so the main bundle stays
+        // smaller and third-party code is cached independently of app code.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return
+          if (/[\\/](@codemirror|@uiw|@lezer|@replit[\\/]codemirror-vim|codemirror|prismjs)[\\/]/.test(id))
+            return "codemirror"
+          if (
+            /[\\/](unified|remark-[^\\/]+|rehype-[^\\/]+|mdast[^\\/]*|micromark[^\\/]*|hast[^\\/]*|katex|refractor|property-information|vfile[^\\/]*|unist[^\\/]*|character-entities[^\\/]*|decode-named-character-reference)[\\/]/.test(
+              id,
+            )
+          )
+            return "markdown"
+          if (/[\\/](react|react-dom|scheduler|@tanstack|jotai|xstate)[\\/]/.test(id)) return "react"
+          return "vendor"
+        },
+      },
+    },
+  },
 })
