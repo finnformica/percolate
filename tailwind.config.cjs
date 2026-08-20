@@ -9,13 +9,6 @@ module.exports = {
   },
   theme: {
     extend: {
-      screens: {
-        "no-hover": { raw: "(hover: none)" },
-        coarse: { raw: "(pointer: coarse)" },
-        fine: { raw: "(pointer: fine)" },
-        "2x": { raw: "(min-resolution: 192dpi)" },
-        print: { raw: "print" },
-      },
       fontWeight: {
         normal: "var(--font-weight-normal)",
         bold: "var(--font-weight-bold)",
@@ -134,6 +127,13 @@ module.exports = {
     require("@tailwindcss/container-queries"),
     require("tailwindcss-animate"),
     plugin(function ({ addVariant }) {
+      // Media-feature variants. Defined here rather than as `screens` so the
+      // `container` utility doesn't try to emit `@media (width >= ...)` for them
+      // (which produced invalid CSS).
+      addVariant("no-hover", "@media (hover: none)")
+      addVariant("coarse", "@media (pointer: coarse)")
+      addVariant("fine", "@media (pointer: fine)")
+      addVariant("print", "@media print")
       addVariant("epaper", "[data-epaper] &")
     }),
   ],

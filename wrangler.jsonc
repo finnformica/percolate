@@ -17,12 +17,14 @@
       "/share/*",
     ],
   },
+  "workers_dev": true,
+  "preview_urls": true,
   "observability": { "enabled": true },
-  // Runtime configuration the Worker needs (set these before deploying):
-  //   VITE_GITHUB_CLIENT_ID  (public)  — add a "vars" block here or set it in
-  //                                      the Cloudflare dashboard.
-  //   GITHUB_CLIENT_SECRET   (secret)  — npx wrangler secret put GITHUB_CLIENT_SECRET
-  // For local `wrangler dev`, put the same values in .dev.vars (git-ignored).
-  // Example:
-  // "vars": { "VITE_GITHUB_CLIENT_ID": "your-oauth-client-id" }
+  // The GitHub OAuth client id is public (it's already baked into the frontend
+  // bundle). The client secret is NOT here — set it once with
+  //   npx wrangler secret put GITHUB_CLIENT_SECRET
+  // and put both in .dev.vars (git-ignored) for local `wrangler dev`.
+  "vars": {
+    "VITE_GITHUB_CLIENT_ID": "Ov23lidqIncQ8ul67fUo",
+  },
 }
