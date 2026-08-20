@@ -264,20 +264,20 @@ export function BlockItem({
     }
   }
 
-  // Shortcuts available for the highlighted block, shown as discoverable hints
-  // at the end of the row and stacked when several apply.
-  const shortcuts: { keys: string[]; label: string; onClick: () => void }[] = []
+  // Shortcuts available for the highlighted block, shown as keycaps in the
+  // right gutter and stacked when several apply. `title` is the hover tooltip.
+  const shortcuts: { keys: string[]; title: string; onClick: () => void }[] = []
   if (type.kind === "todo") {
     shortcuts.push({
       keys: ["X"],
-      label: type.checked ? "Uncheck" : "Check",
+      title: type.checked ? "Uncheck" : "Check",
       onClick: () => api.onContentChange(block.id, toggleTodo(block.content)),
     })
   }
   if (hasChildren) {
     shortcuts.push({
-      keys: ["Space"],
-      label: isCollapsed ? "Expand" : "Collapse",
+      keys: ["␣"], // the open-box space symbol
+      title: isCollapsed ? "Expand" : "Collapse",
       onClick: () => api.toggleCollapse(block.id),
     })
   }
@@ -308,7 +308,7 @@ export function BlockItem({
 
   return (
     <div>
-      <div className="group flex items-start gap-1">
+      <div className="group relative flex items-start gap-1">
         <IconButton
           aria-label={isCollapsed ? "Expand" : "Collapse"}
           size="small"
@@ -373,20 +373,26 @@ export function BlockItem({
                 <BlockContent content={body} doc={doc} />
               </div>
             )}
-            {selected && shortcuts.length > 0 ? (
-              <div className="flex h-[1lh] shrink-0 items-center gap-2 pl-2">
-                {shortcuts.map((shortcut) => (
-                  <KeyHint
-                    key={shortcut.label}
-                    keys={shortcut.keys}
-                    label={shortcut.label}
-                    onClick={shortcut.onClick}
-                  />
-                ))}
-              </div>
-            ) : null}
           </div>
         </div>
+
+        {/* Shortcut keycaps sit in the right gutter, absolutely positioned so
+            they never reflow a full-width block, and fade in when selected. */}
+        {selected && shortcuts.length > 0 ? (
+          <div
+            data-testid="block-shortcuts"
+            className="block-shortcuts absolute left-full top-0.5 flex h-[1lh] items-center gap-1 pl-2"
+          >
+            {shortcuts.map((shortcut) => (
+              <KeyHint
+                key={shortcut.title}
+                keys={shortcut.keys}
+                title={shortcut.title}
+                onClick={shortcut.onClick}
+              />
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {hasChildren && !isCollapsed ? (
