@@ -146,23 +146,6 @@ body:has([data-resizing="true"]) * {
   }
 }
 
-/* Block shortcut hints — fade/slide in when a block is highlighted. */
-
-.block-shortcuts {
-  animation: block-shortcuts-in 120ms ease-out;
-}
-
-@keyframes block-shortcuts-in {
-  from {
-    opacity: 0;
-    transform: translateX(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
 /* Book cover */
 
 .book-cover {

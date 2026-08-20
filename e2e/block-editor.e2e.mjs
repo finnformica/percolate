@@ -269,18 +269,11 @@ await story("blockeditor--empty")
   check("ArrowUp from the first visual line leaves the block", left)
 }
 
-// --- Select-mode shortcuts: x toggles a todo, Space collapses; keycaps show ---
+// --- Select-mode shortcuts: x toggles a todo, Space collapses a subtree ---
 await story("blockeditor--mixed")
 {
-  // Selecting a todo reveals an "X" keycap (labelled "Check" for a11y).
+  // Select a todo and toggle its checkbox with `x`.
   await page.getByRole("button", { name: "A todo" }).click()
-  const hints = () => page.getByTestId("block-shortcuts")
-  check("selected todo shows an X keycap", await page.getByText("X", { exact: true }).isVisible())
-  check(
-    "keycap carries a Check tooltip",
-    await hints().getByRole("button", { name: "Check" }).isVisible(),
-  )
-  await page.screenshot({ path: `${OUT}/07-shortcut-hints.png` })
   await page.keyboard.press("x")
   await page.waitForTimeout(120)
   let md = await serialized()
@@ -290,35 +283,16 @@ await story("blockeditor--mixed")
   md = await serialized()
   check("x unchecks the todo", md.includes("[ ] A todo"))
 
-  // Selecting a block with children reveals a "␣" keycap; Space toggles it.
+  // Select a block with children and collapse/expand it with Space.
   const child = page.getByRole("button", { name: "A nested bullet" })
   await page.getByRole("button", { name: "A bullet point" }).click()
-  check("selected parent shows a ␣ keycap", await page.getByText("␣", { exact: true }).isVisible())
-  check(
-    "keycap carries a Collapse tooltip",
-    await hints().getByRole("button", { name: "Collapse" }).isVisible(),
-  )
   check("child visible before collapse", await child.isVisible())
   await page.keyboard.press("Space")
   await page.waitForTimeout(120)
   check("Space collapses the block", (await child.count()) === 0)
-  check(
-    "collapsed parent's keycap now says Expand",
-    await hints().getByRole("button", { name: "Expand" }).isVisible(),
-  )
   await page.keyboard.press("Space")
   await page.waitForTimeout(120)
   check("Space expands the block again", await child.isVisible())
-}
-
-// --- Multiple shortcuts stack on one block (a todo with children) ---
-await story("blockeditor--nested-todo")
-{
-  await page.getByRole("button", { name: "Parent todo" }).click()
-  const hasCheck = await page.getByText("X", { exact: true }).isVisible()
-  const hasCollapse = await page.getByText("␣", { exact: true }).isVisible()
-  check("both keycaps stack on a todo with children", hasCheck && hasCollapse)
-  await page.screenshot({ path: `${OUT}/08-stacked-hints.png` })
 }
 
 // --- A new note opens with the first block already in edit mode ---

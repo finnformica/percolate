@@ -31,7 +31,9 @@ export function NoteTitle({
   }
 
   return (
-    <h1 className="flex items-baseline gap-2 font-content text-3xl font-bold leading-tight">
+    // pl-8 aligns the title with the block content column (past the block
+    // editor's collapse-toggle gutter), so it lines up with headings below.
+    <h1 className="flex items-baseline gap-2 pl-8 font-content text-3xl font-bold leading-tight">
       <span aria-hidden className="select-none text-text-tertiary">
         #
       </span>

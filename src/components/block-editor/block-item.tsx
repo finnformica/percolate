@@ -10,7 +10,6 @@ import {
   type BlockType,
 } from "../../blocks/block-type"
 import { IconButton } from "../icon-button"
-import { KeyHint } from "../key-hint"
 import { BlockContent } from "./block-content"
 import { caretLineFlags } from "./caret"
 
@@ -264,24 +263,6 @@ export function BlockItem({
     }
   }
 
-  // Shortcuts available for the highlighted block, shown as keycaps in the
-  // right gutter and stacked when several apply. `title` is the hover tooltip.
-  const shortcuts: { keys: string[]; title: string; onClick: () => void }[] = []
-  if (type.kind === "todo") {
-    shortcuts.push({
-      keys: ["X"],
-      title: type.checked ? "Uncheck" : "Check",
-      onClick: () => api.onContentChange(block.id, toggleTodo(block.content)),
-    })
-  }
-  if (hasChildren) {
-    shortcuts.push({
-      keys: ["␣"], // the open-box space symbol
-      title: isCollapsed ? "Expand" : "Collapse",
-      onClick: () => api.toggleCollapse(block.id),
-    })
-  }
-
   const marker =
     type.kind === "todo" ? (
       <span className="flex h-[1lh] shrink-0 items-center">
@@ -375,24 +356,6 @@ export function BlockItem({
             )}
           </div>
         </div>
-
-        {/* Shortcut keycaps sit in the right gutter, absolutely positioned so
-            they never reflow a full-width block, and fade in when selected. */}
-        {selected && shortcuts.length > 0 ? (
-          <div
-            data-testid="block-shortcuts"
-            className="block-shortcuts absolute left-full top-0.5 flex h-[1lh] items-center gap-1 pl-2"
-          >
-            {shortcuts.map((shortcut) => (
-              <KeyHint
-                key={shortcut.title}
-                keys={shortcut.keys}
-                title={shortcut.title}
-                onClick={shortcut.onClick}
-              />
-            ))}
-          </div>
-        ) : null}
       </div>
 
       {hasChildren && !isCollapsed ? (
