@@ -558,6 +558,13 @@ function NotePage() {
                 >
                   Open in GitHub
                 </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  icon={<NoteIcon16 />}
+                  disabled={isSignedOut || !note}
+                  onClick={() => navigate({ to: "/block/$", params: { _splat: noteId ?? "" } })}
+                >
+                  Open in block editor
+                </DropdownMenu.Item>
                 <DropdownMenu.Item icon={<PrinterIcon16 />} onClick={() => window.print()}>
                   Print
                 </DropdownMenu.Item>
