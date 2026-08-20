@@ -1,8 +1,9 @@
 import { useLayoutEffect, useRef } from "react"
-import type { KeyboardEvent } from "react"
+import type { ChangeEvent, KeyboardEvent } from "react"
 import { cx } from "../../utils/cx"
 import type { Block, BlockDoc } from "../../blocks/types"
 import { getBlockType, stripMarker, toggleTodo, type BlockType } from "../../blocks/block-type"
+import { IconButton } from "../icon-button"
 import { BlockContent } from "./block-content"
 
 export interface FocusRequest {
@@ -26,7 +27,8 @@ export interface BlockEditorApi {
   toggleCollapse: (id: string) => void
   setFocus: (focus: FocusRequest | null) => void
   onContentChange: (id: string, content: string) => void
-  onEnter: (id: string) => void
+  /** Insert a new block after `id`, optionally pre-filled (e.g. a list marker). */
+  onEnter: (id: string, initial?: string) => void
   onIndent: (id: string) => void
   onOutdent: (id: string) => void
   onBackspaceEmpty: (id: string) => void
@@ -74,37 +76,72 @@ export function BlockItem({
   const isCollapsed = api.collapsed.has(block.id)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const viewRef = useRef<HTMLDivElement>(null)
+  const pendingCaret = useRef<number | null>(null)
 
   const type = getBlockType(block.content)
+  // The block is edited and rendered *without* its marker (the `- `, `# `,
+  // `[ ] `, `> `), which is shown as a real bullet/checkbox/heading style. This
+  // keeps the view and the editor pixel-identical — nothing shifts on click.
   const body = stripMarker(block.content)
+  const prefix = block.content.slice(0, block.content.length - body.length)
   const typo = typographyFor(type)
 
+  // Focus and place the caret when editing starts.
+  useLayoutEffect(() => {
+    if (!editing) return
+    const el = textareaRef.current
+    if (!el) return
+    el.focus()
+    const pos = api.focus?.atStart ? 0 : el.value.length
+    el.setSelectionRange(pos, pos)
+  }, [editing, api.focus?.atStart])
+
+  // Resize on content change, and restore the caret after a marker shortcut
+  // reshaped the visible text (e.g. typing `# ` promoted the block to a
+  // heading and the `# ` moved out of the textarea).
   useLayoutEffect(() => {
     if (!editing) return
     const el = textareaRef.current
     if (!el) return
     el.style.height = "auto"
     el.style.height = `${el.scrollHeight}px`
-    el.focus()
-    const pos = api.focus?.atStart ? 0 : el.value.length
-    el.setSelectionRange(pos, pos)
-  }, [editing, api.focus?.atStart])
+    if (pendingCaret.current !== null) {
+      const pos = pendingCaret.current
+      pendingCaret.current = null
+      el.setSelectionRange(pos, pos)
+    }
+  }, [editing, block.content])
 
-  // Give the block keyboard focus while it's the highlighted (selected) one, so
-  // arrow keys and Enter reach it.
+  // Give the block keyboard focus while it's the highlighted (selected) one.
   useLayoutEffect(() => {
     if (selected) viewRef.current?.focus()
   }, [selected])
 
-  const autoSize = (el: HTMLTextAreaElement) => {
-    el.style.height = "auto"
-    el.style.height = `${el.scrollHeight}px`
+  const handleTextareaChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    const el = event.currentTarget
+    const newBody = el.value
+    const caret = el.selectionStart
+    const newContent = prefix + newBody
+    const derivedBody = stripMarker(newContent)
+    if (derivedBody.length !== newBody.length) {
+      // A marker was extracted into (or merged out of) the prefix; keep the
+      // caret relative to the visible text.
+      pendingCaret.current = Math.max(0, caret - (newBody.length - derivedBody.length))
+    }
+    api.onContentChange(block.id, newContent)
   }
 
   const handleEditKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault()
-      api.onEnter(block.id)
+      const isList = type.kind === "bullet" || type.kind === "todo"
+      if (isList && body.trim() === "") {
+        // Enter on an empty list item exits the list (becomes a paragraph).
+        api.onContentChange(block.id, "")
+      } else {
+        const continuation = type.kind === "bullet" ? "- " : type.kind === "todo" ? "[ ] " : ""
+        api.onEnter(block.id, continuation)
+      }
     } else if (event.key === "Escape") {
       event.preventDefault()
       api.escapeEdit(block.id)
@@ -114,12 +151,17 @@ export function BlockItem({
       else api.onIndent(block.id)
     } else if (event.key === "Backspace") {
       const el = event.currentTarget
-      if (el.selectionStart === 0 && el.selectionEnd === 0 && block.content === "") {
-        event.preventDefault()
-        api.onBackspaceEmpty(block.id)
+      if (el.selectionStart === 0 && el.selectionEnd === 0) {
+        if (prefix !== "") {
+          // Backspace at the start strips the block's marker (→ paragraph).
+          event.preventDefault()
+          api.onContentChange(block.id, body)
+        } else if (body === "") {
+          event.preventDefault()
+          api.onBackspaceEmpty(block.id)
+        }
       }
     } else if (event.key === "ArrowUp" && !event.shiftKey && !event.metaKey && !event.altKey) {
-      // Move to the previous block only when the caret is on the first line.
       const el = event.currentTarget
       if (el.value.lastIndexOf("\n", el.selectionStart - 1) === -1) {
         event.preventDefault()
@@ -147,82 +189,89 @@ export function BlockItem({
     }
   }
 
+  const marker =
+    type.kind === "todo" ? (
+      <span className="flex h-[1.625em] shrink-0 items-center">
+        <input
+          type="checkbox"
+          checked={type.checked}
+          onClick={(event) => event.stopPropagation()}
+          onChange={() => api.onContentChange(block.id, toggleTodo(block.content))}
+          className="size-4 cursor-pointer accent-text"
+        />
+      </span>
+    ) : type.kind === "bullet" ? (
+      <span className="flex h-[1.625em] shrink-0 items-center">
+        <span aria-hidden className="size-1.5 rounded-full bg-text-secondary" />
+      </span>
+    ) : null
+
   return (
     <div>
       <div className="group flex items-start gap-1">
-        <button
-          type="button"
-          tabIndex={-1}
+        <IconButton
           aria-label={isCollapsed ? "Expand" : "Collapse"}
+          size="small"
+          disableTooltip
+          tabIndex={-1}
           onClick={() => api.toggleCollapse(block.id)}
           className={cx(
-            "mt-0.5 grid size-5 shrink-0 place-items-center rounded-md text-text-tertiary transition hover:bg-bg-secondary",
+            "mt-0.5 w-6 shrink-0 text-text-tertiary",
             !hasChildren && "pointer-events-none opacity-0",
-            isCollapsed ? "rotate-0" : "rotate-90",
           )}
         >
-          <svg width="8" height="8" viewBox="0 0 8 8" aria-hidden>
+          <svg
+            width="8"
+            height="8"
+            viewBox="0 0 8 8"
+            aria-hidden
+            className={cx("transition-transform", isCollapsed ? "rotate-0" : "rotate-90")}
+          >
             <path d="M2 1l4 3-4 3z" fill="currentColor" />
           </svg>
-        </button>
+        </IconButton>
 
         <div className="min-w-0 flex-1 py-0.5 font-content leading-relaxed">
-          {editing ? (
-            <textarea
-              ref={textareaRef}
-              value={block.content}
-              rows={1}
-              spellCheck
-              onChange={(event) => {
-                autoSize(event.currentTarget)
-                api.onContentChange(block.id, event.currentTarget.value)
-              }}
-              onKeyDown={handleEditKeyDown}
-              onBlur={() => api.setFocus(null)}
-              className={cx(
-                "w-full resize-none border-none bg-transparent p-0 font-content leading-relaxed text-text outline-none",
-                typo,
-              )}
-            />
-          ) : (
-            <div
-              ref={viewRef}
-              role="button"
-              tabIndex={0}
-              className={cx(
-                "flex min-h-[1.6em] cursor-text items-start gap-2 rounded-sm px-1 outline-none",
-                selected && "bg-bg-secondary",
-                type.kind === "quote" && "border-l-2 border-border-secondary pl-3",
-              )}
-              onClick={() => api.select(block.id)}
-              onDoubleClick={() => api.edit(block.id)}
-              onKeyDown={handleSelectKeyDown}
-            >
-              {type.kind === "todo" ? (
-                <input
-                  type="checkbox"
-                  checked={type.checked}
-                  onClick={(event) => event.stopPropagation()}
-                  onChange={() => api.onContentChange(block.id, toggleTodo(block.content))}
-                  className="mt-[0.35em] size-4 shrink-0 cursor-pointer accent-text"
-                />
-              ) : type.kind === "bullet" ? (
-                <span
-                  aria-hidden
-                  className="mt-[0.7em] size-1.5 shrink-0 rounded-full bg-text-secondary"
-                />
-              ) : null}
-              <div
+          <div
+            className={cx(
+              "flex items-start gap-2 rounded-sm px-1",
+              selected && "bg-bg-secondary",
+              type.kind === "quote" && "border-l-2 border-border-secondary pl-2",
+            )}
+          >
+            {marker}
+            {editing ? (
+              <textarea
+                ref={textareaRef}
+                value={body}
+                rows={1}
+                spellCheck
+                onChange={handleTextareaChange}
+                onKeyDown={handleEditKeyDown}
+                onBlur={() => api.setFocus(null)}
                 className={cx(
-                  "min-w-0 flex-1",
+                  "min-w-0 flex-1 resize-none border-none bg-transparent p-0 font-content leading-relaxed text-text outline-none",
+                  typo,
+                )}
+              />
+            ) : (
+              <div
+                ref={viewRef}
+                role="button"
+                tabIndex={0}
+                className={cx(
+                  "min-h-[1.625em] min-w-0 flex-1 cursor-text outline-none",
                   typo,
                   type.kind === "todo" && type.checked && "text-text-secondary line-through",
                 )}
+                onClick={() => api.select(block.id)}
+                onDoubleClick={() => api.edit(block.id)}
+                onKeyDown={handleSelectKeyDown}
               >
                 <BlockContent content={body} doc={doc} />
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 

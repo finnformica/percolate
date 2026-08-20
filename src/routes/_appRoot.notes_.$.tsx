@@ -217,6 +217,29 @@ function NotePage() {
     [isSignedOut, noteId, note, saveNote, githubRepo],
   )
 
+  // Show "Saving…" the instant a save is requested, rather than waiting for the
+  // debounced sync to actually start. Cleared when the sync finishes (or a
+  // short fallback, in case no sync was needed).
+  const [pendingSave, setPendingSave] = useState(false)
+  const wasSyncingRef = React.useRef(false)
+  useEffect(() => {
+    if (isSyncing) {
+      wasSyncingRef.current = true
+    } else if (wasSyncingRef.current) {
+      wasSyncingRef.current = false
+      setPendingSave(false)
+    }
+  }, [isSyncing])
+
+  const requestSave = React.useCallback(() => {
+    if (isSignedOut || !isDraft) return
+    setPendingSave(true)
+    handleSave(editorValue)
+    window.setTimeout(() => setPendingSave(false), 4000)
+  }, [isSignedOut, isDraft, handleSave, editorValue])
+
+  const isSaving = pendingSave || isSyncing
+
   const updateWidth = React.useCallback(
     (width: Width) => {
       if (!noteId) return
@@ -338,7 +361,7 @@ function NotePage() {
   useHotkeys(
     "mod+s",
     (event) => {
-      handleSave(editorValue)
+      requestSave()
       event.preventDefault()
     },
     {
@@ -401,15 +424,15 @@ function NotePage() {
         <div className="flex items-center gap-2">
           {useBlockEditor || (!note && editorValue) || isDraft ? (
             <Button
-              disabled={isSignedOut || isSyncing || !isDraft}
+              disabled={isSignedOut || isSaving || !isDraft}
               variant="primary"
               size="small"
-              shortcut={isSyncing ? undefined : ["⌘", "S"]}
-              onClick={() => handleSave(editorValue)}
+              shortcut={isSaving ? undefined : ["⌘", "S"]}
+              onClick={requestSave}
               className="hidden items-center gap-1.5 sm:flex"
             >
-              {isSyncing ? <LoadingIcon16 className="animate-spin" /> : null}
-              {isSyncing ? "Saving…" : "Save"}
+              {isSaving ? <LoadingIcon16 className="animate-spin" /> : null}
+              {isSaving ? "Saving…" : "Save"}
             </Button>
           ) : null}
 
@@ -640,14 +663,14 @@ function NotePage() {
         <div className="card-2 flex gap-1.5 coarse:gap-2 rounded-full! p-1.5 coarse:p-2 sm:hidden print:hidden">
           {useBlockEditor || (!note && editorValue) || isDraft ? (
             <Button
-              disabled={isSignedOut || isSyncing || !isDraft}
+              disabled={isSignedOut || isSaving || !isDraft}
               variant="primary"
-              shortcut={isSyncing ? undefined : ["⌘", "S"]}
-              onClick={() => handleSave(editorValue)}
+              shortcut={isSaving ? undefined : ["⌘", "S"]}
+              onClick={requestSave}
               className="coarse:h-12 items-center gap-1.5 rounded-full coarse:px-6"
             >
-              {isSyncing ? <LoadingIcon16 className="animate-spin" /> : null}
-              {isSyncing ? "Saving…" : "Save"}
+              {isSaving ? <LoadingIcon16 className="animate-spin" /> : null}
+              {isSaving ? "Saving…" : "Save"}
             </Button>
           ) : null}
           <RadixSwitch.Root

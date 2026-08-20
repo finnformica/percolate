@@ -81,8 +81,8 @@ export function BlockEditor({
       }),
     setFocus,
     onContentChange: (id, content) => onChange(updateContent(doc, id, content)),
-    onEnter: (id) => {
-      const fresh = emptyBlock()
+    onEnter: (id, initial = "") => {
+      const fresh = emptyBlock(initial)
       onChange(insertAfter(doc, id, fresh))
       edit(fresh.id)
     },
