@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from "react"
 import type { KeyboardEvent } from "react"
 import { cx } from "../../utils/cx"
 import type { Block, BlockDoc } from "../../blocks/types"
+import { getBlockType, stripMarker, toggleTodo, type BlockType } from "../../blocks/block-type"
 import { BlockContent } from "./block-content"
 
 export interface FocusRequest {
@@ -24,6 +25,28 @@ export interface BlockEditorApi {
   onArrowDown: (id: string) => void
 }
 
+/** Typography shared by a block's rendered view and its edit textarea, so
+ * switching between them never changes the text's size or weight. */
+function typographyFor(type: BlockType): string {
+  switch (type.kind) {
+    case "heading":
+      switch (type.level) {
+        case 1:
+          return "text-2xl font-bold"
+        case 2:
+          return "text-xl font-bold"
+        case 3:
+          return "text-lg font-bold"
+        default:
+          return "text-base font-bold"
+      }
+    case "quote":
+      return "italic text-text-secondary"
+    default:
+      return "text-base"
+  }
+}
+
 export function BlockItem({
   doc,
   block,
@@ -39,6 +62,10 @@ export function BlockItem({
   const hasChildren = block.children.length > 0
   const isCollapsed = api.collapsed.has(block.id)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const type = getBlockType(block.content)
+  const body = stripMarker(block.content)
+  const typo = typographyFor(type)
 
   useLayoutEffect(() => {
     if (!editing) return
@@ -95,8 +122,8 @@ export function BlockItem({
           aria-label={isCollapsed ? "Expand" : "Collapse"}
           onClick={() => api.toggleCollapse(block.id)}
           className={cx(
-            "mt-[3px] grid h-5 w-4 shrink-0 place-items-center rounded text-text-tertiary transition-transform hover:bg-bg-secondary",
-            !hasChildren && "invisible",
+            "mt-1 grid h-6 w-4 shrink-0 place-items-center rounded text-text-tertiary transition hover:bg-bg-secondary",
+            !hasChildren && "pointer-events-none opacity-0 group-hover:opacity-0",
             isCollapsed ? "rotate-0" : "rotate-90",
           )}
         >
@@ -105,16 +132,7 @@ export function BlockItem({
           </svg>
         </button>
 
-        <div className="mt-[9px] grid h-2 w-3 shrink-0 place-items-center">
-          <span
-            className={cx(
-              "h-1.5 w-1.5 rounded-full bg-text-tertiary",
-              isCollapsed && hasChildren && "ring-2 ring-bg-tertiary",
-            )}
-          />
-        </div>
-
-        <div className="min-w-0 flex-1 py-0.5 font-content">
+        <div className="min-w-0 flex-1 py-0.5 font-content leading-relaxed">
           {editing ? (
             <textarea
               ref={textareaRef}
@@ -127,13 +145,19 @@ export function BlockItem({
               }}
               onKeyDown={handleKeyDown}
               onBlur={() => api.setFocus(null)}
-              className="w-full resize-none border-none bg-transparent p-0 font-mono text-sm leading-relaxed text-text outline-none"
+              className={cx(
+                "w-full resize-none border-none bg-transparent p-0 leading-relaxed text-text outline-none",
+                typo,
+              )}
             />
           ) : (
             <div
               role="button"
               tabIndex={0}
-              className="cursor-text leading-relaxed outline-none"
+              className={cx(
+                "flex min-h-[1.6em] cursor-text items-start gap-2 outline-none",
+                type.kind === "quote" && "border-l-2 border-border-secondary pl-3",
+              )}
               onClick={() => api.setFocus({ id: block.id })}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
@@ -142,7 +166,29 @@ export function BlockItem({
                 }
               }}
             >
-              <BlockContent content={block.content} doc={doc} />
+              {type.kind === "todo" ? (
+                <input
+                  type="checkbox"
+                  checked={type.checked}
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={() => api.onContentChange(block.id, toggleTodo(block.content))}
+                  className="mt-[0.35em] size-4 shrink-0 cursor-pointer accent-text"
+                />
+              ) : type.kind === "bullet" ? (
+                <span
+                  aria-hidden
+                  className="mt-[0.7em] size-1.5 shrink-0 rounded-full bg-text-secondary"
+                />
+              ) : null}
+              <div
+                className={cx(
+                  "min-w-0 flex-1",
+                  typo,
+                  type.kind === "todo" && type.checked && "text-text-secondary line-through",
+                )}
+              >
+                <BlockContent content={body} doc={doc} />
+              </div>
             </div>
           )}
         </div>
