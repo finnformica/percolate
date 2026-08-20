@@ -321,6 +321,33 @@ await story("blockeditor--nested-todo")
   await page.screenshot({ path: `${OUT}/08-stacked-hints.png` })
 }
 
+// --- A new note opens with the first block already in edit mode ---
+{
+  await page.goto(`${BASE}?id=blockeditor--auto-focus&viewMode=story`, {
+    waitUntil: "domcontentloaded",
+  })
+  await page.locator("textarea").first().waitFor({ timeout: 10000 })
+  const editors = await page.locator("textarea").count()
+  const focused = await page.evaluate(() => document.activeElement?.tagName === "TEXTAREA")
+  check("new note starts editing the first block", editors === 1 && focused)
+}
+
+// --- The editable note title renders `# name` and renames on Enter ---
+{
+  await page.goto(`${BASE}?id=notetitle--default&viewMode=story`, {
+    waitUntil: "domcontentloaded",
+  })
+  const input = page.getByRole("textbox", { name: "Note name" })
+  await input.waitFor({ timeout: 10000 })
+  check("title shows a leading #", await page.getByText("#", { exact: true }).isVisible())
+  check("title input holds the note name", (await input.inputValue()) === "Meeting notes")
+  await input.fill("Renamed note")
+  await input.press("Enter")
+  await page.waitForTimeout(100)
+  const name = await page.locator('[data-testid="note-name"]').textContent()
+  check("editing the title renames the note", name === "Renamed note", name)
+}
+
 // --- Keyboard navigation highlights, doesn't edit ---
 await story("blockeditor--mixed")
 await page.getByRole("button", { name: "Project ideas" }).click() // select first

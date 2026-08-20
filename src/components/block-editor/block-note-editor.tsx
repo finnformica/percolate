@@ -22,11 +22,14 @@ export function BlockNoteEditor({
   value,
   onChange,
   historyResetToken,
+  startEditing,
 }: {
   value: string
   onChange: (value: string) => void
   /** Changes on save; collapses the block editor's local undo history. */
   historyResetToken?: unknown
+  /** Start with the first block in edit mode (e.g. a brand-new note). */
+  startEditing?: boolean
 }) {
   const [doc, setDoc] = useState<BlockDoc>(() => withStarterBlock(parse(value)))
 
@@ -35,5 +38,12 @@ export function BlockNoteEditor({
     onChange(serialize(next))
   }
 
-  return <BlockEditor doc={doc} onChange={handleChange} historyResetToken={historyResetToken} />
+  return (
+    <BlockEditor
+      doc={doc}
+      onChange={handleChange}
+      historyResetToken={historyResetToken}
+      startEditing={startEditing}
+    />
+  )
 }

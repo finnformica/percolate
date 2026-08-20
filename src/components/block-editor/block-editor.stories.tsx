@@ -18,11 +18,11 @@ function withStarterBlock(doc: BlockDoc): BlockDoc {
  * Stateful harness so the block editor can be exercised in isolation (no auth,
  * no GitHub). The serialized markdown is exposed for assertions.
  */
-function Harness({ initial }: { initial: string }) {
+function Harness({ initial, startEditing }: { initial: string; startEditing?: boolean }) {
   const [doc, setDoc] = useState<BlockDoc>(() => withStarterBlock(parse(initial)))
   return (
     <div style={{ maxWidth: 640, padding: 24 }}>
-      <BlockEditor doc={doc} onChange={setDoc} />
+      <BlockEditor doc={doc} onChange={setDoc} startEditing={startEditing} />
       <pre data-testid="serialized" style={{ position: "fixed", left: -9999, top: 0 }} aria-hidden>
         {serialize(doc)}
       </pre>
@@ -65,6 +65,11 @@ export const Empty: Story = {
 /** A todo that also has children — both shortcut hints stack when selected. */
 export const NestedTodo: Story = {
   args: { initial: "[ ] Parent todo\n  id:: blk_pt\n  - child bullet\n    id:: blk_pc\n" },
+}
+
+/** A brand-new note opens with the first block already in edit mode. */
+export const AutoFocus: Story = {
+  args: { initial: "", startEditing: true },
 }
 
 const serialized = (canvasElement: HTMLElement) =>

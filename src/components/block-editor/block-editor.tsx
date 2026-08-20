@@ -33,14 +33,20 @@ export function BlockEditor({
   doc,
   onChange,
   historyResetToken,
+  startEditing = false,
 }: {
   doc: BlockDoc
   onChange: (doc: BlockDoc) => void
   /** Changes when the note is saved, collapsing the local undo history. */
   historyResetToken?: unknown
+  /** Start with the first block in edit mode (e.g. a brand-new note). */
+  startEditing?: boolean
 }) {
-  const [focus, setFocus] = useState<FocusRequest | null>(null)
-  const [selected, setSelected] = useState<string | null>(() => doc.rootBlockIds[0] ?? null)
+  const firstBlockId = doc.rootBlockIds[0] ?? null
+  const [focus, setFocus] = useState<FocusRequest | null>(() =>
+    startEditing && firstBlockId ? { id: firstBlockId } : null,
+  )
+  const [selected, setSelected] = useState<string | null>(() => firstBlockId)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const history = useBlockHistory(onChange, historyResetToken)
 

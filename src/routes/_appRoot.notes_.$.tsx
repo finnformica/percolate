@@ -37,6 +37,7 @@ import {
   WidthFullIcon16,
 } from "../components/icons"
 import { BlockNoteEditor } from "../components/block-editor/block-note-editor"
+import { NoteTitle } from "../components/block-editor/note-title"
 import { InsertTemplateDialog, removeFrontmatterComments } from "../components/insert-template"
 import { LinkHighlightProvider } from "../components/link-highlight-provider"
 import { Markdown } from "../components/markdown"
@@ -261,56 +262,63 @@ function NotePage() {
     [noteId, editorValue, setEditorValue, handleSave],
   )
 
+  // Rename the current note to `rawName`. Returns whether it succeeded (so an
+  // inline title editor can revert on failure).
+  const renameTo = React.useCallback(
+    (rawName: string): boolean => {
+      if (!noteId) return false
+
+      const oldNoteId = noteId
+      const newNoteId = rawName.trim().replace(/\.md$/i, "").trim()
+      if (!newNoteId || newNoteId === oldNoteId) return false
+
+      const result = renameNote({
+        oldName: oldNoteId,
+        newName: newNoteId,
+        content: editorValue,
+      })
+
+      if (!result.success) {
+        switch (result.reason) {
+          case "no-op":
+            return false
+          case "invalid":
+            {
+              const invalidCharacters = Array.from(new Set(getInvalidNoteIdCharacters(newNoteId)))
+              const invalidList = invalidCharacters.map((char) => `"${char}"`).join(", ")
+              const suffix = invalidList ? `: ${invalidList}` : ""
+              window.alert(`"${newNoteId}.md" contains invalid characters${suffix}`)
+            }
+            return false
+          case "duplicate":
+            window.alert(`"${newNoteId}.md" already exists.`)
+            return false
+          default:
+            result.reason satisfies never
+        }
+        return false
+      }
+
+      clearNoteDraft({ githubRepo, noteId: oldNoteId })
+      clearNoteDraft({ githubRepo, noteId: newNoteId })
+
+      navigate({
+        to: "/notes/$",
+        params: { _splat: newNoteId },
+        search: (prev) => ({ ...prev, content: undefined }),
+        replace: true,
+      })
+      return true
+    },
+    [noteId, renameNote, editorValue, githubRepo, navigate],
+  )
+
   const handleRename = React.useCallback(() => {
     if (!noteId) return
-
-    const oldNoteId = noteId
-    const newNoteIdRaw = window.prompt("Rename file", oldNoteId)
-    if (!newNoteIdRaw) return
-
-    const newNoteIdTrimmed = newNoteIdRaw.trim()
-    if (!newNoteIdTrimmed) return
-
-    const newNoteId = newNoteIdTrimmed.replace(/\.md$/i, "").trim()
-    if (!newNoteId || newNoteId === oldNoteId) return
-
-    const result = renameNote({
-      oldName: oldNoteId,
-      newName: newNoteId,
-      content: editorValue,
-    })
-
-    if (!result.success) {
-      switch (result.reason) {
-        case "no-op":
-          return
-        case "invalid":
-          {
-            const invalidCharacters = Array.from(new Set(getInvalidNoteIdCharacters(newNoteId)))
-            const invalidList = invalidCharacters.map((char) => `"${char}"`).join(", ")
-            const suffix = invalidList ? `: ${invalidList}` : ""
-            window.alert(`"${newNoteId}.md" contains invalid characters${suffix}`)
-          }
-          return
-        case "duplicate":
-          window.alert(`"${newNoteId}.md" already exists.`)
-          return
-        default:
-          result.reason satisfies never
-      }
-      return
-    }
-
-    clearNoteDraft({ githubRepo, noteId: oldNoteId })
-    clearNoteDraft({ githubRepo, noteId: newNoteId })
-
-    navigate({
-      to: "/notes/$",
-      params: { _splat: newNoteId },
-      search: (prev) => ({ ...prev, content: undefined }),
-      replace: true,
-    })
-  }, [noteId, renameNote, editorValue, githubRepo, navigate])
+    const raw = window.prompt("Rename file", noteId)
+    if (raw == null) return
+    renameTo(raw)
+  }, [noteId, renameTo])
 
   const switchToWriting = React.useCallback(() => {
     navigate({ search: (prev) => ({ ...prev, mode: "write" }), replace: true })
@@ -726,12 +734,16 @@ function NotePage() {
             ) : null}
 
             {useBlockEditor ? (
-              <BlockNoteEditor
-                key={noteId}
-                value={editorValue}
-                onChange={setEditorValue}
-                historyResetToken={saveEpoch}
-              />
+              <div className="flex flex-col gap-3">
+                <NoteTitle noteId={noteId ?? ""} onRename={renameTo} />
+                <BlockNoteEditor
+                  key={noteId}
+                  value={editorValue}
+                  onChange={setEditorValue}
+                  historyResetToken={saveEpoch}
+                  startEditing={!note}
+                />
+              </div>
             ) : (
               <>
                 {mode === "read" && (
