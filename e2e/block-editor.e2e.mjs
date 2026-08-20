@@ -269,6 +269,53 @@ await story("blockeditor--empty")
   check("ArrowUp from the first visual line leaves the block", left)
 }
 
+// --- Select-mode shortcuts: x toggles a todo, Space collapses; hints show ---
+await story("blockeditor--mixed")
+{
+  // Selecting a todo reveals its "X Check" hint; pressing x toggles it.
+  await page.getByRole("button", { name: "A todo" }).click()
+  check("selected todo shows an X hint", await page.getByText("Check", { exact: true }).isVisible())
+  await page.screenshot({ path: `${OUT}/07-shortcut-hints.png` })
+  await page.keyboard.press("x")
+  await page.waitForTimeout(120)
+  let md = await serialized()
+  check("x checks the todo", md.includes("[x] A todo"))
+  await page.keyboard.press("x")
+  await page.waitForTimeout(120)
+  md = await serialized()
+  check("x unchecks the todo", md.includes("[ ] A todo"))
+
+  // Selecting a block with children reveals a "Space Collapse" hint; Space
+  // toggles collapse.
+  const child = page.getByRole("button", { name: "A nested bullet" })
+  await page.getByRole("button", { name: "A bullet point" }).click()
+  check(
+    "selected parent shows a Space hint",
+    await page.getByText("Collapse", { exact: true }).isVisible(),
+  )
+  check("child visible before collapse", await child.isVisible())
+  await page.keyboard.press("Space")
+  await page.waitForTimeout(120)
+  check("Space collapses the block", (await child.count()) === 0)
+  check(
+    "collapsed parent shows Expand hint",
+    await page.getByText("Expand", { exact: true }).isVisible(),
+  )
+  await page.keyboard.press("Space")
+  await page.waitForTimeout(120)
+  check("Space expands the block again", await child.isVisible())
+}
+
+// --- Multiple shortcuts stack on one block (a todo with children) ---
+await story("blockeditor--nested-todo")
+{
+  await page.getByRole("button", { name: "Parent todo" }).click()
+  const hasCheck = await page.getByText("Check", { exact: true }).isVisible()
+  const hasCollapse = await page.getByText("Collapse", { exact: true }).isVisible()
+  check("both hints stack on a todo with children", hasCheck && hasCollapse)
+  await page.screenshot({ path: `${OUT}/08-stacked-hints.png` })
+}
+
 // --- Keyboard navigation highlights, doesn't edit ---
 await story("blockeditor--mixed")
 await page.getByRole("button", { name: "Project ideas" }).click() // select first

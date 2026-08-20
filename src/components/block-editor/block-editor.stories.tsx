@@ -62,6 +62,11 @@ export const Empty: Story = {
   args: { initial: "" },
 }
 
+/** A todo that also has children — both shortcut hints stack when selected. */
+export const NestedTodo: Story = {
+  args: { initial: "[ ] Parent todo\n  id:: blk_pt\n  - child bullet\n    id:: blk_pc\n" },
+}
+
 const serialized = (canvasElement: HTMLElement) =>
   canvasElement.querySelector('[data-testid="serialized"]')?.textContent ?? ""
 

@@ -10,6 +10,7 @@ import {
   type BlockType,
 } from "../../blocks/block-type"
 import { IconButton } from "../icon-button"
+import { KeyHint } from "../key-hint"
 import { BlockContent } from "./block-content"
 import { caretLineFlags } from "./caret"
 
@@ -252,7 +253,33 @@ export function BlockItem({
     } else if (event.key === "ArrowDown") {
       event.preventDefault()
       api.moveSelection(block.id, "down")
+    } else if ((event.key === "x" || event.key === "X") && type.kind === "todo") {
+      // Toggle a todo's checkbox from select mode.
+      event.preventDefault()
+      api.onContentChange(block.id, toggleTodo(block.content))
+    } else if (event.key === " " && hasChildren) {
+      // Collapse/expand a block with children from select mode.
+      event.preventDefault()
+      api.toggleCollapse(block.id)
     }
+  }
+
+  // Shortcuts available for the highlighted block, shown as discoverable hints
+  // at the end of the row and stacked when several apply.
+  const shortcuts: { keys: string[]; label: string; onClick: () => void }[] = []
+  if (type.kind === "todo") {
+    shortcuts.push({
+      keys: ["X"],
+      label: type.checked ? "Uncheck" : "Check",
+      onClick: () => api.onContentChange(block.id, toggleTodo(block.content)),
+    })
+  }
+  if (hasChildren) {
+    shortcuts.push({
+      keys: ["Space"],
+      label: isCollapsed ? "Expand" : "Collapse",
+      onClick: () => api.toggleCollapse(block.id),
+    })
   }
 
   const marker =
@@ -346,6 +373,18 @@ export function BlockItem({
                 <BlockContent content={body} doc={doc} />
               </div>
             )}
+            {selected && shortcuts.length > 0 ? (
+              <div className="flex h-[1lh] shrink-0 items-center gap-2 pl-2">
+                {shortcuts.map((shortcut) => (
+                  <KeyHint
+                    key={shortcut.label}
+                    keys={shortcut.keys}
+                    label={shortcut.label}
+                    onClick={shortcut.onClick}
+                  />
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
