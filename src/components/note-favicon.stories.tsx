@@ -50,20 +50,6 @@ export const IsWeeklyNote: Story = {
   play: async ({ canvasElement }) => expectFavicon(canvasElement, "favicon-weekly"),
 }
 
-export const HasIsbn: Story = {
-  args: {
-    note: parseNote(
-      "1",
-      `---
-isbn: 9781542866507
----
-
-# How to Take Smart Notes`,
-    ),
-  },
-  play: async ({ canvasElement }) => expectFavicon(canvasElement, "favicon-isbn"),
-}
-
 export const HasUrl: Story = {
   args: {
     note: parseNote("1", `# [Google](https://google.com)`),

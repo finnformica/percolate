@@ -49,19 +49,6 @@ export const NoteFavicon = React.memo(
       icon = <WebsiteFavicon data-testid="favicon-url" url={note.url} />
     }
 
-    // Book
-    if (note.frontmatter.isbn && online) {
-      icon = (
-        <img
-          data-testid="favicon-isbn"
-          className="inline-block aspect-[3/4] h-icon rounded-[2px]! epaper:rounded-none! bg-bg-secondary"
-          src={`https://covers.openlibrary.org/b/isbn/${note.frontmatter.isbn}-S.jpg`}
-          alt=""
-          aria-hidden
-        />
-      )
-    }
-
     // Template
     if (note.type === "template") {
       icon = <NoteTemplateIcon16 data-testid="favicon-template" />

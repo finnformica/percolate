@@ -11,7 +11,6 @@ import { RepoForm } from "../components/repo-form"
 import { Signature } from "../components/signature"
 import { Switch } from "../components/switch"
 import {
-  epaperAtom,
   githubRepoAtom,
   githubUserAtom,
   isCloningRepoAtom,
@@ -33,7 +32,6 @@ function RouteComponent() {
       <div className="p-4 pb-6">
         <div className="mx-auto flex max-w-xl flex-col gap-6">
           <GitHubSection />
-          <AppearanceSection />
           <EditorSection />
           <div className="p-5 text-text-tertiary self-center flex flex-col gap-3 items-center">
             <span className="text-sm">
@@ -145,21 +143,6 @@ function GitHubSection() {
             </Button>
           </div>
         ) : null}
-      </div>
-    </SettingsSection>
-  )
-}
-
-function AppearanceSection() {
-  const [epaper, setEpaper] = useAtom(epaperAtom)
-
-  return (
-    <SettingsSection title="Appearance">
-      <div className="flex items-center gap-2.5 leading-4">
-        <Switch id="epaper" checked={epaper} onCheckedChange={setEpaper} />
-        <label htmlFor="epaper" className="select-none">
-          E-paper
-        </label>
       </div>
     </SettingsSection>
   )

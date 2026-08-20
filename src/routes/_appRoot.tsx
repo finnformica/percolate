@@ -7,7 +7,7 @@ import { AppLayout } from "../components/app-layout"
 import { CommandMenu } from "../components/command-menu"
 import { DevBar } from "../components/dev-bar"
 import { ErrorIcon16 } from "../components/icons"
-import { epaperAtom, globalStateMachineAtom } from "../global-state"
+import { globalStateMachineAtom } from "../global-state"
 
 export const Route = createFileRoute("/_appRoot")({
   component: RouteComponent,
@@ -39,12 +39,6 @@ function RouteComponent() {
   useEvent("online", () => {
     send("SYNC")
   })
-
-  // Set the e-paper mode
-  const epaper = useAtomValue(epaperAtom)
-  React.useEffect(() => {
-    document.documentElement.toggleAttribute("data-epaper", epaper)
-  }, [epaper])
 
   // Apply overflow classes to parent elements
   React.useEffect(() => {

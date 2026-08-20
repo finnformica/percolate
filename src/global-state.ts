@@ -850,8 +850,6 @@ export const taskSearcherAtom = atom((get) => {
 // UI state
 // -----------------------------------------------------------------------------
 
-export const epaperAtom = atomWithStorage<boolean>("epaper", false)
-
 export const vimModeAtom = atomWithStorage<boolean>("vim-mode", false)
 
 export const defaultFontAtom = atomWithStorage<Font>("font", "sans")

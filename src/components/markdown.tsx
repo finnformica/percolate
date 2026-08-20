@@ -156,11 +156,10 @@ export const Markdown = React.memo(
     const url = typeof frontmatter?.url === "string" ? frontmatter.url : titleUrl
 
     // Show favicon when we have a URL,
-    // but not when we're already showing a book cover, avatar, or leading emoji
-    const hasBookCover = frontmatter?.isbn && online
+    // but not when we're already showing an avatar or leading emoji
     const hasAvatar = typeof frontmatter?.github === "string" && online
     const hasLeadingEmoji = title ? getLeadingEmoji(title.replace(/^#\s*/, "")) !== null : false
-    const showFavicon = online && url && !hasBookCover && !hasAvatar && !hasLeadingEmoji
+    const showFavicon = online && url && !hasAvatar && !hasLeadingEmoji
 
     const contextValue = React.useMemo(
       () => ({
@@ -216,12 +215,6 @@ export const Markdown = React.memo(
             </div>
           ) : (
             <>
-              {frontmatter?.isbn && online ? (
-                // If the note has an ISBN, show the book cover
-                <div className="mb-5 inline-flex">
-                  <BookCover isbn={`${frontmatter.isbn}`} />
-                </div>
-              ) : null}
               {typeof frontmatter?.github === "string" && online ? (
                 // If the note has a GitHub username, show the GitHub avatar
                 <div className="mb-5 inline-flex">
@@ -354,23 +347,6 @@ export function MarkdownContent({ children, className }: { children: string; cla
     >
       {children}
     </ReactMarkdown>
-  )
-}
-
-function BookCover({ isbn }: { isbn: string }) {
-  return (
-    <a
-      className="book-cover inline-block focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-focus"
-      href={`https://openlibrary.org/isbn/${isbn}`}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <img
-        src={`https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg`}
-        alt="Book cover"
-        className="aspect-[2/3] h-[120px] bg-bg-tertiary"
-      />
-    </a>
   )
 }
 
