@@ -3,6 +3,7 @@ import React from "react"
 import { githubRepoAtom, githubUserAtom, globalStateMachineAtom } from "../global-state"
 import { GitHubRepository } from "../schema"
 import { cx } from "../utils/cx"
+import { removeAutoInitReadme, seedRepoTemplate } from "../utils/repo-template"
 import { Button } from "./button"
 import { ErrorIcon16, LoadingIcon16 } from "./icons"
 import { RadioGroup } from "./radio-group"
@@ -63,6 +64,11 @@ export function RepoForm({ className, onSubmit, onCancel }: RepoFormProps) {
 
         throw new Error(message || "Failed to create repository. Please try again.")
       }
+
+      // Seed the template structure (prune-uploads Action, .gitattributes, and a
+      // welcome note), then drop the default README auto_init created.
+      await seedRepoTemplate(owner, name, githubUser.token)
+      await removeAutoInitReadme(owner, name, githubUser.token)
 
       // 1 second delay to allow GitHub API to catch up
       await new Promise((resolve) => setTimeout(resolve, 1000))
