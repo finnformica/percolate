@@ -40,7 +40,9 @@ const EXPOSE_HEADERS = [
   "server",
   "transfer-encoding",
   "vary",
-  "www-authenticate",
+  // NB: deliberately NOT forwarding `www-authenticate`. A same-origin 401 that
+  // carries a `WWW-Authenticate: Basic` header makes the browser pop its native
+  // HTTP Basic Auth dialog. isomorphic-git authenticates via onAuth without it.
   "x-github-request-id",
   "x-redirected-url",
 ]
