@@ -14,7 +14,6 @@
       "/github-auth",
       "/file-proxy",
       "/git-lfs-file",
-      "/api/tmdb-poster",
       "/share/*",
     ],
   },
@@ -23,7 +22,6 @@
   //   VITE_GITHUB_CLIENT_ID  (public)  — add a "vars" block here or set it in
   //                                      the Cloudflare dashboard.
   //   GITHUB_CLIENT_SECRET   (secret)  — npx wrangler secret put GITHUB_CLIENT_SECRET
-  //   TMDB_API_KEY           (optional)— npx wrangler secret put TMDB_API_KEY
   // For local `wrangler dev`, put the same values in .dev.vars (git-ignored).
   // Example:
   // "vars": { "VITE_GITHUB_CLIENT_ID": "your-oauth-client-id" }

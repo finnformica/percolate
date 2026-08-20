@@ -11,7 +11,6 @@ import { corsProxy } from "./handlers/cors-proxy"
 import { githubAuth } from "./handlers/github-auth"
 import { fileProxy } from "./handlers/file-proxy"
 import { gitLfsFile } from "./handlers/git-lfs-file"
-import { tmdbPoster } from "./handlers/tmdb-poster"
 import { share } from "./handlers/share"
 
 export default {
@@ -22,7 +21,6 @@ export default {
     if (pathname === "/github-auth") return githubAuth(request, env)
     if (pathname === "/file-proxy") return fileProxy(request)
     if (pathname === "/git-lfs-file") return gitLfsFile(request)
-    if (pathname === "/api/tmdb-poster") return tmdbPoster(request, env)
     if (pathname.startsWith("/share/")) return share(request, env)
 
     // Everything else: static assets (index.html fallback for SPA routes).

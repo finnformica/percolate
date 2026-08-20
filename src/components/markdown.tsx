@@ -67,7 +67,6 @@ import { SyntaxHighlighter, TemplateSyntaxHighlighter } from "./syntax-highlight
 import { TagLink } from "./tag-link"
 import { Tooltip } from "./tooltip"
 import { WebsiteFavicon } from "./website-favicon"
-import { getImdbId } from "../utils/imdb"
 
 export type MarkdownProps = {
   children: string
@@ -158,13 +157,10 @@ export const Markdown = React.memo(
 
     // Show favicon when we have a URL,
     // but not when we're already showing a book cover, avatar, or leading emoji
-    const imdbId = getImdbId(url ?? null)
     const hasBookCover = frontmatter?.isbn && online
-    const hasImdbPoster = imdbId && online
     const hasAvatar = typeof frontmatter?.github === "string" && online
     const hasLeadingEmoji = title ? getLeadingEmoji(title.replace(/^#\s*/, "")) !== null : false
-    const showFavicon =
-      online && url && !hasBookCover && !hasImdbPoster && !hasAvatar && !hasLeadingEmoji
+    const showFavicon = online && url && !hasBookCover && !hasAvatar && !hasLeadingEmoji
 
     const contextValue = React.useMemo(
       () => ({
@@ -224,11 +220,6 @@ export const Markdown = React.memo(
                 // If the note has an ISBN, show the book cover
                 <div className="mb-5 inline-flex">
                   <BookCover isbn={`${frontmatter.isbn}`} />
-                </div>
-              ) : null}
-              {hasImdbPoster && url ? (
-                <div className="mb-5 inline-flex">
-                  <ImdbPoster imdbId={imdbId} url={url} />
                 </div>
               ) : null}
               {typeof frontmatter?.github === "string" && online ? (
@@ -363,23 +354,6 @@ export function MarkdownContent({ children, className }: { children: string; cla
     >
       {children}
     </ReactMarkdown>
-  )
-}
-
-function ImdbPoster({ imdbId, url }: { imdbId: string; url: string }) {
-  return (
-    <a
-      className="inline-block rounded-sm shadow-md transition-all duration-100 ease-out hover:shadow-lg hover:-translate-y-1 hover:scale-[1.03] hover:-rotate-2 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-border-focus"
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <img
-        src={`/api/tmdb-poster?imdbId=${imdbId}&size=w185`}
-        alt="IMDb poster"
-        className="aspect-[2/3] h-[120px] rounded-sm object-cover bg-bg-tertiary"
-      />
-    </a>
   )
 }
 

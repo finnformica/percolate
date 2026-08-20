@@ -57,7 +57,6 @@ npm run dev:worker              # builds, then serves app + API via wrangler dev
 # One-time: set the OAuth client id (public) and secret
 #   - add VITE_GITHUB_CLIENT_ID under "vars" in wrangler.jsonc (or the dashboard)
 npx wrangler secret put GITHUB_CLIENT_SECRET
-npx wrangler secret put TMDB_API_KEY   # optional (movie-poster feature only)
 
 npm run deploy                  # tsc + vite build, then wrangler deploy
 ```
@@ -69,14 +68,13 @@ Then point your GitHub OAuth app's **Authorization callback URL** at
 
 The Worker (`worker/index.ts`) serves the built SPA from `dist/` and handles:
 
-| Route              | Purpose                                                     |
-| ------------------ | ----------------------------------------------------------- |
-| `/cors-proxy/*`    | Relays git-over-http so the browser can talk to GitHub      |
-| `/github-auth`     | OAuth `code` → access-token exchange                        |
-| `/file-proxy`      | Proxies binary files (Git LFS blobs)                        |
-| `/git-lfs-file`    | Resolves/uploads Git LFS objects                            |
-| `/api/tmdb-poster` | Movie-poster lookup (optional template feature)             |
-| `/share/*`         | OG meta tags for shared-note link previews (SPA for humans) |
+| Route           | Purpose                                                     |
+| --------------- | ----------------------------------------------------------- |
+| `/cors-proxy/*` | Relays git-over-http so the browser can talk to GitHub      |
+| `/github-auth`  | OAuth `code` → access-token exchange                        |
+| `/file-proxy`   | Proxies binary files (Git LFS blobs)                        |
+| `/git-lfs-file` | Resolves/uploads Git LFS objects                            |
+| `/share/*`      | OG meta tags for shared-note link previews (SPA for humans) |
 
 ## Scripts
 
