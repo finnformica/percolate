@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { generateNoteId, getInvalidNoteIdCharacters, isValidNoteId } from "./note-id"
+import { generateNoteId, getInvalidNoteIdCharacters, isValidNoteId, toNoteId } from "./note-id"
 
 describe("isValidNoteId", () => {
   it("accepts valid ids", () => {
@@ -30,5 +30,27 @@ describe("getInvalidNoteIdCharacters", () => {
 describe("generateNoteId", () => {
   it("returns a numeric string", () => {
     expect(generateNoteId()).toMatch(/^\d+$/)
+  })
+})
+
+describe("toNoteId", () => {
+  it("keeps a filename-safe name as-is", () => {
+    expect(toNoteId("Meeting notes")).toBe("Meeting notes")
+    expect(toNoteId("project-alpha")).toBe("project-alpha")
+  })
+
+  it("drops characters a filename can't contain", () => {
+    expect(toNoteId("Q3: plan [draft]")).toBe("Q3 plan draft")
+    expect(toNoteId("a|b?c")).toBe("abc")
+  })
+
+  it("collapses whitespace and trims surrounding space and slashes", () => {
+    expect(toNoteId("  hello   world  ")).toBe("hello world")
+    expect(toNoteId("/notes/")).toBe("notes")
+  })
+
+  it("returns an empty string when nothing usable remains", () => {
+    expect(toNoteId("")).toBe("")
+    expect(toNoteId("[]|?")).toBe("")
   })
 })

@@ -12,7 +12,7 @@ import { useNoteById, useSaveNote } from "../hooks/note"
 import { useSearchNotes } from "../hooks/search-notes"
 import { Note } from "../schema"
 import { formatDate, formatDateDistance, toDateString } from "../utils/date"
-import { generateNoteId } from "../utils/note-id"
+import { generateNoteId, toNoteId } from "../utils/note-id"
 import { pluralize } from "../utils/pluralize"
 import {
   CalendarDateIcon16,
@@ -39,6 +39,7 @@ export function CommandMenu() {
   const searchNotes = useSearchNotes()
   const tagSearcher = useAtomValue(tagSearcherAtom)
   const saveNote = useSaveNote()
+  const notes = useAtomValue(notesAtom)
   const pinnedNotes = useAtomValue(pinnedNotesAtom)
   const getHasDailyNote = useAtomCallback(useCallback((get) => get(hasDailyNoteAtom), []))
   const [isOpen, setIsOpen] = useAtom(isCommandMenuOpenAtom)
@@ -411,19 +412,21 @@ export function CommandMenu() {
                 key={`Create new note "${deferredQuery}"`}
                 icon={<PlusIcon16 />}
                 onSelect={handleSelect(() => {
-                  const note = {
-                    id: generateNoteId(),
-                    content: `# ${deferredQuery}`,
+                  // The typed text becomes the note's name (its filename), not
+                  // the first line of content. Fall back to a generated id if
+                  // the text has no filename-safe characters.
+                  const id = toNoteId(deferredQuery) || generateNoteId()
+
+                  // If a note with that name already exists, open it rather
+                  // than overwriting it with an empty note.
+                  if (!notes.has(id)) {
+                    saveNote({ id, content: "" })
                   }
 
-                  // Create new note
-                  saveNote(note)
-
-                  // Navigate to new note
                   navigate({
                     to: "/notes/$",
                     params: {
-                      _splat: note.id,
+                      _splat: id,
                     },
                     search: {
                       mode: "write",
