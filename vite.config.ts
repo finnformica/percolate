@@ -66,7 +66,11 @@ export default defineConfig({
         // smaller and third-party code is cached independently of app code.
         manualChunks(id) {
           if (!id.includes("node_modules")) return
-          if (/[\\/](@codemirror|@uiw|@lezer|@replit[\\/]codemirror-vim|codemirror|prismjs)[\\/]/.test(id))
+          if (
+            /[\\/](@codemirror|@uiw|@lezer|@replit[\\/]codemirror-vim|codemirror|prismjs)[\\/]/.test(
+              id,
+            )
+          )
             return "codemirror"
           if (
             /[\\/](unified|remark-[^\\/]+|rehype-[^\\/]+|mdast[^\\/]*|micromark[^\\/]*|hast[^\\/]*|katex|refractor|property-information|vfile[^\\/]*|unist[^\\/]*|character-entities[^\\/]*|decode-named-character-reference)[\\/]/.test(
@@ -74,7 +78,8 @@ export default defineConfig({
             )
           )
             return "markdown"
-          if (/[\\/](react|react-dom|scheduler|@tanstack|jotai|xstate)[\\/]/.test(id)) return "react"
+          if (/[\\/](react|react-dom|scheduler|@tanstack|jotai|xstate)[\\/]/.test(id))
+            return "react"
           return "vendor"
         },
       },
