@@ -89,9 +89,12 @@ export const Route = createFileRoute("/_appRoot/notes_/$")({
   },
   // The block editor is the default note surface. Redirect here unless the
   // caller explicitly asked for the classic editor (?classic), forwarding any
-  // seed content for a new note.
+  // seed content for a new note. Daily/weekly (calendar) notes stay on the
+  // classic editor so their date navigation is preserved.
   beforeLoad: ({ search, params }) => {
-    if (!search.classic) {
+    const splat = params._splat ?? ""
+    const isCalendarNote = isValidDateString(splat) || isValidWeekString(splat)
+    if (!search.classic && !isCalendarNote) {
       throw redirect({
         to: "/block/$",
         params: { _splat: params._splat },

@@ -30,6 +30,10 @@ import { SyncStatusIcon, useSyncStatusText } from "./sync-status"
 
 const hasDailyNoteAtom = selectAtom(notesAtom, (notes) => notes.has(toDateString(new Date())))
 
+// Calendar and Tags are hidden from the sidebar for now while the block editor
+// is the focus. Flip to true to bring them back.
+const SHOW_CALENDAR_AND_TAGS = false
+
 const SizeContext = createContext<"medium" | "large">("medium")
 
 export function NavItems({
@@ -92,33 +96,37 @@ export function NavItems({
                 Notes
               </NavLink>
             </li>
-            <li>
-              <NavLink
-                to="/notes/$"
-                params={{ _splat: todayString }}
-                search={{
-                  mode: hasDailyNote ? "read" : "write",
-                  query: undefined,
-                }}
-                activeIcon={<CalendarDateFillIcon16 date={today.getDate()} />}
-                icon={<CalendarDateIcon16 date={today.getDate()} />}
-                forceActive={isCalendarActive}
-                onNavigate={onNavigate}
-              >
-                Calendar
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="/tags"
-                search={{ query: undefined, sort: "name" }}
-                activeIcon={<TagFillIcon16 />}
-                icon={<TagIcon16 />}
-                onNavigate={onNavigate}
-              >
-                Tags
-              </NavLink>
-            </li>
+            {SHOW_CALENDAR_AND_TAGS ? (
+              <>
+                <li>
+                  <NavLink
+                    to="/notes/$"
+                    params={{ _splat: todayString }}
+                    search={{
+                      mode: hasDailyNote ? "read" : "write",
+                      query: undefined,
+                    }}
+                    activeIcon={<CalendarDateFillIcon16 date={today.getDate()} />}
+                    icon={<CalendarDateIcon16 date={today.getDate()} />}
+                    forceActive={isCalendarActive}
+                    onNavigate={onNavigate}
+                  >
+                    Calendar
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    to="/tags"
+                    search={{ query: undefined, sort: "name" }}
+                    activeIcon={<TagFillIcon16 />}
+                    icon={<TagIcon16 />}
+                    onNavigate={onNavigate}
+                  >
+                    Tags
+                  </NavLink>
+                </li>
+              </>
+            ) : null}
           </ul>
           {pinnedNotes.length > 0 ? (
             <div className="flex flex-col gap-1">

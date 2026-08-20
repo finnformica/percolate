@@ -40,6 +40,7 @@ const EXPOSE_HEADERS = [
   "server",
   "transfer-encoding",
   "vary",
+  "www-authenticate",
   "x-github-request-id",
   "x-redirected-url",
 ]
