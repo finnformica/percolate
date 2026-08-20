@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "percolate",
+  "name": "ruminate",
   "compatibility_date": "2026-08-20",
   "main": "./worker/index.ts",
   "assets": {

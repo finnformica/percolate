@@ -19,7 +19,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
 
   try {
     const response = await fetch(`https://api.github.com/gists/${gistId}`, {
-      headers: { "User-Agent": "percolate" },
+      headers: { "User-Agent": "ruminate" },
     })
 
     if (!response.ok) {
@@ -52,7 +52,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
     const ogImageUrl = getOgImageUrl(frontmatter)
     const pageTitle = getHtmlEscaped(noteTitle || gist.description || "Untitled")
     const pageDescription = "Shared note"
-    const siteName = getHtmlEscaped(gist?.owner?.login || "Percolate")
+    const siteName = getHtmlEscaped(gist?.owner?.login || "Ruminate")
     const escapedNoteContent = getHtmlEscaped(noteContent)
     const escapedUrl = getHtmlEscaped(url.href)
     const escapedImageUrl = ogImageUrl ? getHtmlEscaped(ogImageUrl) : ""

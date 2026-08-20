@@ -1,5 +1,5 @@
 /**
- * Percolate Cloudflare Worker.
+ * Ruminate Cloudflare Worker.
  *
  * Serves the built SPA via the ASSETS binding and handles the same API routes
  * that were previously Vercel serverless functions. Which routes reach this

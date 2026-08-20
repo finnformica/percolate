@@ -1,8 +1,8 @@
-# Percolate
+# Ruminate
 
 A note-taking app that stores your notes as markdown files in a GitHub repository you own.
 
-Percolate is built on the foundation of [**Lumen**](https://github.com/lumen-notes/lumen)
+Ruminate is built on the foundation of [**Lumen**](https://github.com/lumen-notes/lumen)
 by Cole Bemis & contributors (MIT). It keeps Lumen's design system, editor, and
 GitHub sync, trimmed down and re-hosted on Cloudflare:
 
@@ -92,6 +92,6 @@ npm run test         # vitest
 
 ## Credits & license
 
-Percolate is derived from [Lumen](https://github.com/lumen-notes/lumen)
+Ruminate is derived from [Lumen](https://github.com/lumen-notes/lumen)
 (MIT © 2024 Lumen). The original license is preserved in [`LICENSE`](./LICENSE).
-Percolate is likewise MIT-licensed.
+Ruminate is likewise MIT-licensed.

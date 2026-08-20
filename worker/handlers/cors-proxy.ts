@@ -65,7 +65,7 @@ export async function corsProxy(request: Request): Promise<Response> {
     }
 
     // GitHub behaves differently if the user-agent starts with "git/".
-    requestHeaders.set("user-agent", "git/percolate/cors-proxy")
+    requestHeaders.set("user-agent", "git/ruminate/cors-proxy")
 
     const fetchOptions: RequestInit & { duplex?: "half" } = {
       method: request.method,

@@ -41,7 +41,7 @@ export const Route = createFileRoute("/_appRoot/tags/")({
   },
   component: RouteComponent,
   head: () => ({
-    meta: [{ title: "Tags · Percolate" }],
+    meta: [{ title: "Tags · Ruminate" }],
   }),
 })
 

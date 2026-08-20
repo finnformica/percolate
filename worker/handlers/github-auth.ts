@@ -56,7 +56,7 @@ async function getUser(token: string) {
   const userResponse = await fetch("https://api.github.com/user", {
     headers: {
       Authorization: `Bearer ${token}`,
-      "User-Agent": "percolate",
+      "User-Agent": "ruminate",
     },
   })
 
@@ -74,7 +74,7 @@ async function getUser(token: string) {
   const emailResponse = await fetch("https://api.github.com/user/emails", {
     headers: {
       Authorization: `Bearer ${token}`,
-      "User-Agent": "percolate",
+      "User-Agent": "ruminate",
     },
   })
 

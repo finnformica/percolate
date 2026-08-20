@@ -21,8 +21,8 @@ export default defineConfig({
       registerType: "prompt",
       injectRegister: "auto",
       manifest: {
-        name: "Percolate",
-        short_name: "Percolate",
+        name: "Ruminate",
+        short_name: "Ruminate",
         description: "A block-based note-taking app for better thinking",
         theme_color: "#000000",
         background_color: "#000000",

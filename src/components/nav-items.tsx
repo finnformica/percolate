@@ -158,7 +158,7 @@ export function NavItems({
                 <div className="size-3 rounded-full bg-border-focus opacity-50 animate-ping" />
                 <div className="size-2 rounded-full bg-border-focus" />
               </div>
-              Update Percolate
+              Update Ruminate
             </button>
           ) : null}
           {!online ? (

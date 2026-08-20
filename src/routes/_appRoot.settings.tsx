@@ -22,7 +22,7 @@ import {
 export const Route = createFileRoute("/_appRoot/settings")({
   component: RouteComponent,
   head: () => ({
-    meta: [{ title: "Settings · Percolate" }],
+    meta: [{ title: "Settings · Ruminate" }],
   }),
 })
 
