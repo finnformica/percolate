@@ -33,8 +33,13 @@ export function NoteTitle({
   return (
     // pl-8 aligns the title with the block content column (past the block
     // editor's collapse-toggle gutter), so it lines up with headings below.
-    <h1 className="flex items-baseline gap-2 pl-8 font-content text-3xl font-bold leading-tight">
-      <span aria-hidden className="select-none text-text-tertiary">
+    // The title text aligns with the block content column (pl-8), while the #
+    // hangs to its left as a marker — pushed a little off the far edge.
+    <h1 className="relative font-content text-3xl font-bold leading-tight">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-0.5 top-0 select-none text-text-tertiary"
+      >
         #
       </span>
       <input
@@ -53,7 +58,7 @@ export function NoteTitle({
         spellCheck={false}
         aria-label="Note name"
         placeholder="Untitled"
-        className="min-w-0 flex-1 border-none bg-transparent p-0 text-text outline-none placeholder:text-text-tertiary"
+        className="w-full border-none bg-transparent py-0 pl-8 pr-0 text-text outline-none placeholder:text-text-tertiary"
       />
     </h1>
   )
