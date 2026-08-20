@@ -31,7 +31,7 @@ export function NoteTitle({
   }
 
   return (
-    <h1 className="flex items-baseline gap-2 font-content text-2xl font-bold leading-tight">
+    <h1 className="flex items-baseline gap-2 font-content text-3xl font-bold leading-tight">
       <span aria-hidden className="select-none text-text-tertiary">
         #
       </span>
