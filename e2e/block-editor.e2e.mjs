@@ -322,6 +322,32 @@ await story("blockeditor--mixed")
   check("editing the title renames the note", name === "Renamed note", name)
 }
 
+// --- Copying a multi-block selection yields markdown, not just rendered text ---
+await story("blockeditor--mixed")
+{
+  const md = await page.evaluate(() => {
+    const bodies = document.querySelectorAll("[data-block-id]")
+    const range = document.createRange()
+    range.setStartBefore(bodies[0])
+    range.setEndAfter(bodies[2])
+    const sel = window.getSelection()
+    sel.removeAllRanges()
+    sel.addRange(range)
+    const dt = new DataTransfer()
+    bodies[1].dispatchEvent(
+      new ClipboardEvent("copy", { clipboardData: dt, bubbles: true, cancelable: true }),
+    )
+    return dt.getData("text/plain")
+  })
+  check(
+    "copy keeps markdown markers across blocks",
+    md.includes("# Project ideas") &&
+      md.includes("- A bullet point") &&
+      md.includes("Some intro text"),
+    JSON.stringify(md),
+  )
+}
+
 // --- Keyboard navigation highlights, doesn't edit ---
 await story("blockeditor--mixed")
 await page.getByRole("button", { name: "Project ideas" }).click() // select first

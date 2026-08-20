@@ -342,6 +342,7 @@ export function BlockItem({
                 role="button"
                 tabIndex={0}
                 data-testid="block-body"
+                data-block-id={block.id}
                 className={cx(
                   "min-h-[1lh] min-w-0 flex-1 cursor-text outline-none",
                   typo,

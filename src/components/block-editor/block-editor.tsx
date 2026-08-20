@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import type { KeyboardEvent } from "react"
+import type { ClipboardEvent, KeyboardEvent } from "react"
 import type { BlockDoc } from "../../blocks/types"
 import { getBlockType, stripMarker } from "../../blocks/block-type"
 import { parse } from "../../blocks/parse"
@@ -227,9 +227,39 @@ export function BlockEditor({
     }
   }
 
+  // Copying a selection that spans blocks yields the *markdown* (markers and
+  // nesting), not just the rendered text — so it round-trips (paste re-parses
+  // it) and carries structure elsewhere. A selection within one block keeps
+  // the browser's default (the plain selected text).
+  const containerRef = useRef<HTMLDivElement>(null)
+  const handleCopy = (event: ClipboardEvent<HTMLDivElement>) => {
+    const selection = window.getSelection()
+    if (!selection || selection.isCollapsed) return
+
+    const picked: string[] = []
+    const walk = (ids: string[], depth: number) => {
+      for (const id of ids) {
+        const block = doc.blocks[id]
+        if (!block) continue
+        const el = containerRef.current?.querySelector(`[data-block-id="${id}"]`)
+        if (el && selection.containsNode(el, true)) {
+          picked.push("  ".repeat(depth) + block.content)
+        }
+        walk(block.children, depth + 1)
+      }
+    }
+    walk(doc.rootBlockIds, 0)
+
+    // Only take over for multi-block selections; a partial single-block copy
+    // is better served by the plain selected text.
+    if (picked.length < 2) return
+    event.clipboardData.setData("text/plain", picked.join("\n"))
+    event.preventDefault()
+  }
+
   return (
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions
-    <div className="space-y-0.5" onKeyDown={handleKeyDown}>
+    <div className="space-y-0.5" ref={containerRef} onKeyDown={handleKeyDown} onCopy={handleCopy}>
       {doc.rootBlockIds.map((id) => {
         const block = doc.blocks[id]
         if (!block) return null
