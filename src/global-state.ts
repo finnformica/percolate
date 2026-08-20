@@ -311,14 +311,18 @@ function createGlobalStateMachine() {
             const idNumberRaw = id ? Number(id) : undefined
             const idNumber = Number.isFinite(idNumberRaw) ? idNumberRaw : undefined
 
-            // Remove user metadata from URL
+            // Remove the auth metadata from the URL without a full reload
+            // (window.location.replace would reload and race the localStorage
+            // write below). replaceState keeps the SPA state intact.
             searchParams.delete("user_token")
             searchParams.delete("user_id")
             searchParams.delete("user_login")
             searchParams.delete("user_name")
             searchParams.delete("user_email")
 
-            window.location.replace(
+            window.history.replaceState(
+              null,
+              "",
               `${window.location.pathname}${
                 searchParams.toString() ? `?${searchParams.toString()}` : ""
               }`,
