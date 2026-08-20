@@ -259,6 +259,7 @@ export function BlockItem({
                 ref={viewRef}
                 role="button"
                 tabIndex={0}
+                data-testid="block-body"
                 className={cx(
                   "min-h-[1.625em] min-w-0 flex-1 cursor-text outline-none",
                   typo,

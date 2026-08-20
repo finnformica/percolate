@@ -16,6 +16,9 @@ coverage
 storybook-static
 stats.html
 
+# Playwright e2e screenshots (generated each run, not pixel baselines)
+e2e/__screenshots__
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

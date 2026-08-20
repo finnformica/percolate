@@ -20,6 +20,7 @@
     "test:storybook": "test-storybook",
     "test:storybook:watch": "test-storybook --watch",
     "test:storybook:ci": "concurrently -k -s first -n \"storybook,test\" -c \"magenta,blue\" \"npm run build:storybook --quiet && npx http-server storybook-static --port 6006 --silent\" \"npx wait-on tcp:127.0.0.1:6006 && npm run test:storybook\"",
+    "test:e2e": "concurrently -k -s first -n \"storybook,e2e\" -c \"magenta,blue\" \"npm run build:storybook --quiet && npx http-server storybook-static --port 6010 --silent\" \"npx wait-on tcp:127.0.0.1:6010 && node e2e/block-editor.e2e.mjs e2e/__screenshots__\"",
     "benchmark": "vite-node scripts/benchmark.ts",
     "postinstall": "patch-package"
   },
