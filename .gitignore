@@ -30,8 +30,9 @@ stats.html
 # Local Netlify folder
 .netlify
 
-# Local Vercel folder
-.vercel
+# Cloudflare Workers / Wrangler
+.wrangler
+.dev.vars
 
 # Environment variables
 .env

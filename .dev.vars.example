@@ -1,0 +1,7 @@
+# Local values for `wrangler dev` (copy to .dev.vars, which is git-ignored).
+# These are the Worker's runtime env — separate from the frontend build vars
+# in .env (VITE_*).
+
+VITE_GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+TMDB_API_KEY=

@@ -30,10 +30,10 @@
 1.  Start the development server:
 
     ```shell
-    npm run dev:vercel
+    npm run dev:worker
     ```
 
-1.  Open the app at http://localhost:8888
+1.  Open the app at http://localhost:8787
 
 ## Architecture
 
@@ -52,7 +52,7 @@ graph
       indexeddb[(IndexedDB)]
     end
 
-    subgraph edge[Vercel Functions]
+    subgraph edge[Cloudflare Worker]
       cors-proxy(["/cors-proxy"])
     end
 

@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "percolate",
+  "compatibility_date": "2026-08-20",
+  "main": "./worker/index.ts",
+  "assets": {
+    "directory": "./dist/",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // Only these routes invoke the Worker; everything else is served straight
+    // from static assets (with index.html as the SPA fallback).
+    "run_worker_first": [
+      "/cors-proxy/*",
+      "/github-auth",
+      "/file-proxy",
+      "/git-lfs-file",
+      "/api/tmdb-poster",
+      "/share/*",
+    ],
+  },
+  "observability": { "enabled": true },
+  // Runtime configuration the Worker needs (set these before deploying):
+  //   VITE_GITHUB_CLIENT_ID  (public)  — add a "vars" block here or set it in
+  //                                      the Cloudflare dashboard.
+  //   GITHUB_CLIENT_SECRET   (secret)  — npx wrangler secret put GITHUB_CLIENT_SECRET
+  //   TMDB_API_KEY           (optional)— npx wrangler secret put TMDB_API_KEY
+  // For local `wrangler dev`, put the same values in .dev.vars (git-ignored).
+  // Example:
+  // "vars": { "VITE_GITHUB_CLIENT_ID": "your-oauth-client-id" }
+}

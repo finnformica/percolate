@@ -1,8 +1,13 @@
+// GitHub OAuth callback: exchanges the `code` for an access token using the
+// client secret (held as a Worker secret), then redirects back to the app with
+// the token and user info in the query string.
 // Reference: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps
 
-export async function GET(request: Request): Promise<Response> {
+import type { Env } from "../types"
+
+export async function githubAuth(request: Request, env: Env): Promise<Response> {
   try {
-    const url = getRequestUrl(request)
+    const url = new URL(request.url)
     const code = url.searchParams.get("code")
     const state = url.searchParams.get("state")
 
@@ -13,21 +18,25 @@ export async function GET(request: Request): Promise<Response> {
         Accept: "application/json",
       },
       body: JSON.stringify({
-        client_id: process.env.VITE_GITHUB_CLIENT_ID,
-        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        client_id: env.VITE_GITHUB_CLIENT_ID,
+        client_secret: env.GITHUB_CLIENT_SECRET,
         code,
       }),
     })
 
-    const { error, access_token: token } = await response.json()
+    const { error, access_token: token } = (await response.json()) as {
+      error?: string
+      access_token?: string
+    }
 
-    if (error) {
-      throw new Error(error)
+    if (error || !token) {
+      throw new Error(error || "No access token returned")
     }
 
     const { id, login, name, email } = await getUser(token)
 
-    const redirectUrl = new URL(state || "https://uselumen.com")
+    // `state` is the app URL to return to (set by the sign-in button).
+    const redirectUrl = new URL(state || url.origin)
     redirectUrl.searchParams.set("user_token", token)
     if (typeof id === "number" && Number.isFinite(id)) {
       redirectUrl.searchParams.set("user_id", String(id))
@@ -47,10 +56,16 @@ async function getUser(token: string) {
   const userResponse = await fetch("https://api.github.com/user", {
     headers: {
       Authorization: `Bearer ${token}`,
+      "User-Agent": "percolate",
     },
   })
 
-  const { error, id, login, name } = await userResponse.json()
+  const { error, id, login, name } = (await userResponse.json()) as {
+    error?: string
+    id?: number
+    login: string
+    name: string
+  }
 
   if (error) {
     throw new Error(error)
@@ -59,6 +74,7 @@ async function getUser(token: string) {
   const emailResponse = await fetch("https://api.github.com/user/emails", {
     headers: {
       Authorization: `Bearer ${token}`,
+      "User-Agent": "percolate",
     },
   })
 
@@ -84,14 +100,4 @@ async function getUser(token: string) {
   }
 
   return { id, login, name, email: primaryEmail.email }
-}
-
-function getRequestUrl(request: Request): URL {
-  try {
-    return new URL(request.url)
-  } catch {
-    const host = request.headers.get("host") ?? "localhost"
-    const proto = request.headers.get("x-forwarded-proto") ?? "http"
-    return new URL(request.url, `${proto}://${host}`)
-  }
 }

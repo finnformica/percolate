@@ -1,10 +1,9 @@
-/**
- * This function proxies a file from a given URL and returns it directly.
- * The URL should be provided as a query parameter, e.g. /file-proxy?url=https://example.com/image.jpg
- */
-async function handler(request: Request): Promise<Response> {
+// Proxies a file from an arbitrary URL, e.g. /file-proxy?url=https://…/blob.
+// Used when fetching Git LFS blobs client-side.
+
+export async function fileProxy(request: Request): Promise<Response> {
   try {
-    const url = getRequestUrl(request)
+    const url = new URL(request.url)
     const fileUrl = url.searchParams.get("url")
 
     if (!fileUrl) {
@@ -33,18 +32,5 @@ async function handler(request: Request): Promise<Response> {
     console.error(error)
     const message = error instanceof Error ? error.message : "Unknown error"
     return new Response(`Error: ${message}`, { status: 500 })
-  }
-}
-
-export const GET = handler
-export const HEAD = handler
-
-function getRequestUrl(request: Request): URL {
-  try {
-    return new URL(request.url)
-  } catch {
-    const host = request.headers.get("host") ?? "localhost"
-    const proto = request.headers.get("x-forwarded-proto") ?? "http"
-    return new URL(request.url, `${proto}://${host}`)
   }
 }

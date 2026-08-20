@@ -1,4 +1,5 @@
-// Reference: https://github.com/git-lfs/git-lfs/blob/main/docs/api/batch.md
+// Resolves (GET) and uploads (POST) Git LFS objects using the caller's GitHub
+// token. Reference: https://github.com/git-lfs/git-lfs/blob/main/docs/api/batch.md
 
 type LfsUploadRequest = {
   repo: string
@@ -7,10 +8,24 @@ type LfsUploadRequest = {
   size: number
 }
 
-/** Resolves a Git LFS pointer to get the actual file download URL. */
-export async function GET(request: Request): Promise<Response> {
+/** base64 → bytes, avoiding a dependency on Node's Buffer in the Worker. */
+function base64ToBytes(base64: string): Uint8Array {
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return bytes
+}
+
+export function gitLfsFile(request: Request): Promise<Response> {
+  return request.method === "POST" ? uploadLfsFile(request) : resolveLfsPointer(request)
+}
+
+/** Resolves a Git LFS pointer to the actual file download URL. */
+async function resolveLfsPointer(request: Request): Promise<Response> {
   try {
-    const url = getRequestUrl(request)
+    const url = new URL(request.url)
     const repo = url.searchParams.get("repo")
     const pointer = url.searchParams.get("pointer")
     const authorization = request.headers.get("authorization")
@@ -44,7 +59,9 @@ export async function GET(request: Request): Promise<Response> {
       throw new Error("Unable to resolve Git LFS pointer")
     }
 
-    const json = await response.json()
+    const json = (await response.json()) as {
+      objects: { actions: { download: { href: string } } }[]
+    }
     const href = json.objects[0].actions.download.href
 
     return new Response(href, { status: 200 })
@@ -55,7 +72,7 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 /** Uploads a file to Git LFS storage. */
-export async function POST(request: Request): Promise<Response> {
+async function uploadLfsFile(request: Request): Promise<Response> {
   try {
     const { repo, content, oid, size } = (await request.json()) as LfsUploadRequest
     const authorization = request.headers.get("authorization")
@@ -70,7 +87,7 @@ export async function POST(request: Request): Promise<Response> {
       throw new Error("Invalid request")
     }
 
-    const binaryContent = Buffer.from(content, "base64")
+    const binaryContent = base64ToBytes(content)
 
     const response = await fetch(`https://github.com/${repo}.git/info/lfs/objects/batch`, {
       method: "POST",
@@ -90,7 +107,14 @@ export async function POST(request: Request): Promise<Response> {
       throw new Error("Unable to resolve Git LFS pointer")
     }
 
-    const json = await response.json()
+    const json = (await response.json()) as {
+      objects: {
+        actions: {
+          upload: { href: string; header?: Record<string, string> }
+          verify: { href: string; header?: Record<string, string> }
+        }
+      }[]
+    }
     const { upload, verify } = json.objects[0].actions
 
     const uploadResponse = await fetch(upload.href, {
@@ -120,15 +144,5 @@ export async function POST(request: Request): Promise<Response> {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error"
     return new Response(`Error: ${message}`, { status: 500 })
-  }
-}
-
-function getRequestUrl(request: Request): URL {
-  try {
-    return new URL(request.url)
-  } catch {
-    const host = request.headers.get("host") ?? "localhost"
-    const proto = request.headers.get("x-forwarded-proto") ?? "http"
-    return new URL(request.url, `${proto}://${host}`)
   }
 }
