@@ -12,6 +12,7 @@ import { useNoteById, useSaveNote } from "../hooks/note"
 import { useSearchNotes } from "../hooks/search-notes"
 import { Note } from "../schema"
 import { formatDate, formatDateDistance, toDateString } from "../utils/date"
+import { getHeadings } from "../utils/headings"
 import { generateNoteId, toNoteId } from "../utils/note-id"
 import { pluralize } from "../utils/pluralize"
 import {
@@ -450,12 +451,20 @@ type CommandItemProps = {
   value?: string
   icon?: React.ReactNode
   description?: string
+  className?: string
   onSelect?: () => void
 }
 
-function CommandItem({ children, value, icon, description, onSelect }: CommandItemProps) {
+function CommandItem({
+  children,
+  value,
+  icon,
+  description,
+  className,
+  onSelect,
+}: CommandItemProps) {
   return (
-    <Command.Item value={value} onSelect={onSelect}>
+    <Command.Item value={value} onSelect={onSelect} className={className}>
       <div className="flex items-center gap-3">
         <div className="grid h-4 w-4 place-items-center text-text-secondary">{icon}</div>
         <div className="grow truncate">{children}</div>
@@ -468,6 +477,9 @@ function CommandItem({ children, value, icon, description, onSelect }: CommandIt
   )
 }
 
+// How many of a note's headings to list beneath it.
+const NUM_VISIBLE_HEADINGS = 4
+
 function NoteItem({
   note,
   hidePinIcon,
@@ -477,20 +489,33 @@ function NoteItem({
   hidePinIcon?: boolean
   onSelect: () => void
 }) {
+  // Show the note by its filename, with its headings listed as children so you
+  // can find a note by a heading it contains — either opens the note.
+  const headings = getHeadings(note.content).slice(0, NUM_VISIBLE_HEADINGS)
   return (
-    <CommandItem
-      key={note.id}
-      value={note.id}
-      icon={<NoteFavicon note={note} />}
-      onSelect={onSelect}
-    >
-      <span className="flex items-center gap-2 truncate">
-        {!hidePinIcon && note.pinned ? (
-          <PinFillIcon12 className="shrink-0 text-text-pinned" />
-        ) : null}
-        {note?.frontmatter?.gist_id ? <GlobeIcon16 className="shrink-0 text-border-focus" /> : null}
-        <span className="truncate">{note.displayName}</span>
-      </span>
-    </CommandItem>
+    <>
+      <CommandItem value={note.id} icon={<NoteFavicon note={note} />} onSelect={onSelect}>
+        <span className="flex items-center gap-2 truncate">
+          {!hidePinIcon && note.pinned ? (
+            <PinFillIcon12 className="shrink-0 text-text-pinned" />
+          ) : null}
+          {note?.frontmatter?.gist_id ? (
+            <GlobeIcon16 className="shrink-0 text-border-focus" />
+          ) : null}
+          <span className="truncate">{note.id}</span>
+        </span>
+      </CommandItem>
+      {headings.map((heading, index) => (
+        <CommandItem
+          key={`${note.id}::${index}`}
+          value={`${note.id} › ${heading.text}`}
+          className="pl-6"
+          icon={<span className="text-text-tertiary">#</span>}
+          onSelect={onSelect}
+        >
+          <span className="truncate text-text-secondary">{heading.text}</span>
+        </CommandItem>
+      ))}
+    </>
   )
 }
