@@ -77,6 +77,8 @@ type RouteSearch = {
   query: string | undefined
   tasks?: string | undefined
   content?: string
+  /** Heading text to highlight in the block editor on landing (from Cmd-K). */
+  heading?: string
 }
 
 export const Route = createFileRoute("/_appRoot/notes_/$")({
@@ -86,6 +88,7 @@ export const Route = createFileRoute("/_appRoot/notes_/$")({
       query: typeof search.query === "string" ? search.query : undefined,
       tasks: typeof search.tasks === "string" ? search.tasks : undefined,
       content: typeof search.content === "string" ? search.content : undefined,
+      heading: typeof search.heading === "string" ? search.heading : undefined,
     }
   },
   component: RouteComponent,
@@ -123,7 +126,7 @@ function renderTemplate(template: Template, args: Record<string, unknown> = {}) 
 function NotePage() {
   // Router
   const { _splat: noteId } = Route.useParams()
-  const { mode, query, content: defaultContent } = Route.useSearch()
+  const { mode, query, content: defaultContent, heading: highlightHeading } = Route.useSearch()
   const navigate = Route.useNavigate()
 
   // Global state
@@ -742,6 +745,7 @@ function NotePage() {
                   onChange={setEditorValue}
                   historyResetToken={saveEpoch}
                   startEditing={!note}
+                  highlightHeading={highlightHeading}
                 />
               </div>
             ) : (

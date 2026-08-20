@@ -23,6 +23,7 @@ export function BlockNoteEditor({
   onChange,
   historyResetToken,
   startEditing,
+  highlightHeading,
 }: {
   value: string
   onChange: (value: string) => void
@@ -30,6 +31,8 @@ export function BlockNoteEditor({
   historyResetToken?: unknown
   /** Start with the first block in edit mode (e.g. a brand-new note). */
   startEditing?: boolean
+  /** Heading text to highlight/scroll to on landing (e.g. from Cmd-K). */
+  highlightHeading?: string
 }) {
   const [doc, setDoc] = useState<BlockDoc>(() => withStarterBlock(parse(value)))
 
@@ -44,6 +47,7 @@ export function BlockNoteEditor({
       onChange={handleChange}
       historyResetToken={historyResetToken}
       startEditing={startEditing}
+      highlightHeading={highlightHeading}
     />
   )
 }

@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type { KeyboardEvent } from "react"
 import type { BlockDoc } from "../../blocks/types"
-import { stripMarker } from "../../blocks/block-type"
+import { getBlockType, stripMarker } from "../../blocks/block-type"
 import { parse } from "../../blocks/parse"
 import {
   emptyBlock,
@@ -15,6 +15,30 @@ import {
 } from "../../blocks/ops"
 import { BlockItem, type BlockEditorApi, type FocusRequest } from "./block-item"
 import { useBlockHistory } from "./use-block-history"
+
+/** The id of the first heading block whose text matches `heading`, in document
+ * order, or null. Used to highlight a heading arrived at from the command menu. */
+function findHeadingBlockId(doc: BlockDoc, heading: string): string | null {
+  const target = heading.trim()
+  let found: string | null = null
+  const walk = (ids: string[]) => {
+    for (const id of ids) {
+      if (found) return
+      const block = doc.blocks[id]
+      if (!block) continue
+      if (
+        getBlockType(block.content).kind === "heading" &&
+        stripMarker(block.content).trim() === target
+      ) {
+        found = id
+        return
+      }
+      walk(block.children)
+    }
+  }
+  walk(doc.rootBlockIds)
+  return found
+}
 
 /**
  * A controlled block outliner. `doc` is owned by the caller (which serializes
@@ -34,6 +58,7 @@ export function BlockEditor({
   onChange,
   historyResetToken,
   startEditing = false,
+  highlightHeading,
 }: {
   doc: BlockDoc
   onChange: (doc: BlockDoc) => void
@@ -41,14 +66,31 @@ export function BlockEditor({
   historyResetToken?: unknown
   /** Start with the first block in edit mode (e.g. a brand-new note). */
   startEditing?: boolean
+  /** Highlight the block for this heading text on mount / when it changes. */
+  highlightHeading?: string
 }) {
   const firstBlockId = doc.rootBlockIds[0] ?? null
   const [focus, setFocus] = useState<FocusRequest | null>(() =>
     startEditing && firstBlockId ? { id: firstBlockId } : null,
   )
-  const [selected, setSelected] = useState<string | null>(() => firstBlockId)
+  const [selected, setSelected] = useState<string | null>(() =>
+    highlightHeading ? (findHeadingBlockId(doc, highlightHeading) ?? firstBlockId) : firstBlockId,
+  )
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const history = useBlockHistory(onChange, historyResetToken)
+
+  // Re-highlight when the target heading changes (Cmd-K into the open note).
+  // Reads the latest doc via a ref so this only runs on heading changes.
+  const docRef = useRef(doc)
+  docRef.current = doc
+  useEffect(() => {
+    if (!highlightHeading) return
+    const id = findHeadingBlockId(docRef.current, highlightHeading)
+    if (id) {
+      setFocus(null)
+      setSelected(id)
+    }
+  }, [highlightHeading])
 
   // Blocks in the order they appear on screen (depth-first, skipping the
   // children of collapsed blocks). Used for up/down navigation.

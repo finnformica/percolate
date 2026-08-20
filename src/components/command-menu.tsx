@@ -89,6 +89,20 @@ export function CommandMenu() {
     [setIsOpen],
   )
 
+  // Open a note, optionally highlighting one of its headings on landing.
+  const openNote = useCallback(
+    (id: string, heading?: string) => {
+      setIsOpen(false)
+      setQuery("")
+      navigate({
+        to: "/notes/$",
+        params: { _splat: id },
+        search: { mode: "read", query: undefined, heading },
+      })
+    },
+    [setIsOpen, navigate],
+  )
+
   useHotkeys("mod+k", toggleMenu, {
     preventDefault: true,
     enableOnFormTags: true,
@@ -298,18 +312,7 @@ export function CommandMenu() {
                   note={note}
                   // Since they're all pinned, we don't need to show the pin icon
                   hidePinIcon
-                  onSelect={handleSelect(() =>
-                    navigate({
-                      to: "/notes/$",
-                      params: {
-                        _splat: note.id,
-                      },
-                      search: {
-                        mode: "read",
-                        query: undefined,
-                      },
-                    }),
-                  )}
+                  onOpen={(heading) => openNote(note.id, heading)}
                 />
               ))}
             </Command.Group>
@@ -379,18 +382,7 @@ export function CommandMenu() {
                 <NoteItem
                   key={note.id}
                   note={note}
-                  onSelect={handleSelect(() =>
-                    navigate({
-                      to: "/notes/$",
-                      params: {
-                        _splat: note.id,
-                      },
-                      search: {
-                        mode: "read",
-                        query: undefined,
-                      },
-                    }),
-                  )}
+                  onOpen={(heading) => openNote(note.id, heading)}
                 />
               ))}
               {noteResults.length > 0 ? (
@@ -483,18 +475,19 @@ const NUM_VISIBLE_HEADINGS = 4
 function NoteItem({
   note,
   hidePinIcon,
-  onSelect,
+  onOpen,
 }: {
   note: Note
   hidePinIcon?: boolean
-  onSelect: () => void
+  onOpen: (heading?: string) => void
 }) {
-  // Show the note by its filename, with its headings listed as children so you
-  // can find a note by a heading it contains — either opens the note.
+  // Show the note by its filename, with its headings listed (tabbed over) as
+  // children so you can find a note by a heading it contains. Selecting the
+  // note opens it; selecting a heading opens it and highlights that heading.
   const headings = getHeadings(note.content).slice(0, NUM_VISIBLE_HEADINGS)
   return (
     <>
-      <CommandItem value={note.id} icon={<NoteFavicon note={note} />} onSelect={onSelect}>
+      <CommandItem value={note.id} icon={<NoteFavicon note={note} />} onSelect={() => onOpen()}>
         <span className="flex items-center gap-2 truncate">
           {!hidePinIcon && note.pinned ? (
             <PinFillIcon12 className="shrink-0 text-text-pinned" />
@@ -509,9 +502,9 @@ function NoteItem({
         <CommandItem
           key={`${note.id}::${index}`}
           value={`${note.id} › ${heading.text}`}
-          className="pl-6"
+          className="pl-9!"
           icon={<span className="text-text-tertiary">#</span>}
-          onSelect={onSelect}
+          onSelect={() => onOpen(heading.text)}
         >
           <span className="truncate text-text-secondary">{heading.text}</span>
         </CommandItem>
