@@ -29,21 +29,29 @@ export function RepoForm({ className, onSubmit, onCancel }: RepoFormProps) {
     try {
       setIsLoading(true)
 
-      // Create repo from template
-      const response = await fetch(
-        `https://api.github.com/repos/lumen-notes/notes-template/generate`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `token ${githubUser.token}`,
-          },
-          body: JSON.stringify({
-            owner,
-            name,
-            private: true,
-          }),
+      // Create an empty private repo, initialized with a first commit (and
+      // therefore a default `main` branch) so it can be cloned immediately.
+      // Creating under the signed-in user uses /user/repos; any other owner is
+      // treated as an organization. We deliberately avoid the "generate from
+      // template" API — that requires read access to the template repo, and
+      // lumen-notes' template org restricts third-party OAuth apps.
+      const isPersonal = owner.toLowerCase() === githubUser.login.toLowerCase()
+      const url = isPersonal
+        ? `https://api.github.com/user/repos`
+        : `https://api.github.com/orgs/${owner}/repos`
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `token ${githubUser.token}`,
+          Accept: "application/vnd.github+json",
         },
-      )
+        body: JSON.stringify({
+          name,
+          private: true,
+          auto_init: true,
+        }),
+      })
 
       if (!response.ok) {
         if (response.status === 422) {
