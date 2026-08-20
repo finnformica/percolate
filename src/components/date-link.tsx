@@ -48,7 +48,6 @@ export function DateLink({ date, text, className }: DateLinkProps) {
       search={{
         mode: existingNote ? "read" : "write",
         query: undefined,
-        view: "grid",
       }}
     />
   )

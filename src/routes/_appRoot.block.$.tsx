@@ -130,7 +130,7 @@ function RouteComponent() {
           <Link
             to="/notes/$"
             params={{ _splat: noteId ?? "" }}
-            search={{ mode: "read", query: undefined, view: "grid" }}
+            search={{ mode: "read", query: undefined }}
             className="link"
           >
             Open in classic editor

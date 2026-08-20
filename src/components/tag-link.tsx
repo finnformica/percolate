@@ -23,7 +23,6 @@ export function TagLink({ name, className }: TagLinkProps) {
                   .split("/")
                   .slice(0, i + 1)
                   .join("/")}`,
-                view: "grid",
               }}
             >
               {part}

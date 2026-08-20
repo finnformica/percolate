@@ -66,7 +66,6 @@ export function PropertyValue({ property: [key, value], onChange }: PropertyValu
               search={{
                 mode: "read",
                 query: undefined,
-                view: "grid",
               }}
             >
               {formatDate(dateString, { excludeDayOfWeek: true })}
@@ -86,7 +85,6 @@ export function PropertyValue({ property: [key, value], onChange }: PropertyValu
               search={{
                 mode: "read",
                 query: undefined,
-                view: "grid",
               }}
             >
               {formatDateDistance(toDateStringUtc(nextBirthday)).toLowerCase()}

@@ -186,7 +186,7 @@ export const Markdown = React.memo(
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-xl font-bold leading-5">{parsedTemplate.data.name}</h1>
                 <PillButton variant="dashed" asChild>
-                  <Link to="/" search={{ query: "type:template", view: "grid" }}>
+                  <Link to="/" search={{ query: "type:template" }}>
                     Template
                   </Link>
                 </PillButton>
@@ -923,7 +923,6 @@ function NoteEmbed({ id }: NoteEmbedProps) {
           search={{
             mode: "read",
             query: undefined,
-            view: "grid",
           }}
         >
           Source

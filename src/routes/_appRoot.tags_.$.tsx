@@ -9,14 +9,12 @@ import { useDeleteTag, useRenameTag } from "../hooks/tag"
 
 type RouteSearch = {
   query: string | undefined
-  view: "grid" | "list"
 }
 
 export const Route = createFileRoute("/_appRoot/tags_/$")({
   validateSearch: (search: Record<string, unknown>): RouteSearch => {
     return {
       query: typeof search.query === "string" ? search.query : undefined,
-      view: search.view === "list" ? "list" : "grid",
     }
   },
   component: RouteComponent,
@@ -27,7 +25,7 @@ export const Route = createFileRoute("/_appRoot/tags_/$")({
 
 function RouteComponent() {
   const { _splat: tag } = Route.useParams()
-  const { query, view } = Route.useSearch()
+  const { query } = Route.useSearch()
   const navigate = Route.useNavigate()
   const renameTag = useRenameTag()
   const deleteTag = useDeleteTag()
@@ -58,7 +56,7 @@ function RouteComponent() {
                   navigate({
                     to: "/tags/$",
                     params: { _splat: newName },
-                    search: { query, view },
+                    search: { query },
                     replace: true,
                   })
                 }
@@ -82,7 +80,7 @@ function RouteComponent() {
                   deleteTag(tag)
                   navigate({
                     to: "/tags",
-                    search: { query: undefined, sort: "name", view: "list" },
+                    search: { query: undefined, sort: "name" },
                     replace: true,
                   })
                 }
@@ -100,15 +98,11 @@ function RouteComponent() {
             key={tag}
             baseQuery={`tag:${tag}`}
             query={query ?? ""}
-            view={view}
             onQueryChange={(query) =>
               navigate({
                 search: (prev) => ({ ...prev, query }),
                 replace: true,
               })
-            }
-            onViewChange={(view) =>
-              navigate({ search: (prev) => ({ ...prev, view }), replace: true })
             }
           />
         </LinkHighlightProvider>

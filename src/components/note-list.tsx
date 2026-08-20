@@ -1,7 +1,9 @@
 import { Link, useNavigate } from "@tanstack/react-router"
+import { useAtom } from "jotai"
 import React, { useMemo, useState } from "react"
 import { useInView } from "react-intersection-observer"
 import { useDebounce } from "use-debounce"
+import { noteListViewAtom } from "../global-state"
 import { useSearchNotes } from "../hooks/search-notes"
 import { parseQuery } from "../utils/search"
 import { formatNumber, pluralize } from "../utils/pluralize"
@@ -35,22 +37,16 @@ const viewIcons: Record<View, React.ReactNode> = {
 type NoteListProps = {
   baseQuery?: string
   query: string
-  view: View
   onQueryChange: (query: string) => void
-  onViewChange: (view: View) => void
 }
 
 const initialVisibleItems = 10
 
-export function NoteList({
-  baseQuery = "",
-  query,
-  view,
-  onQueryChange,
-  onViewChange,
-}: NoteListProps) {
+export function NoteList({ baseQuery = "", query, onQueryChange }: NoteListProps) {
   const searchNotes = useSearchNotes()
   const navigate = useNavigate()
+  // Grid/list layout is a local preference, persisted outside the URL.
+  const [view, setView] = useAtom(noteListViewAtom)
 
   const [deferredQuery] = useDebounce(query, 150)
 
@@ -172,14 +168,14 @@ export function NoteList({
                   <DropdownMenu.GroupLabel>View as</DropdownMenu.GroupLabel>
                   <DropdownMenu.Item
                     icon={<GridIcon16 />}
-                    onClick={() => onViewChange("grid")}
+                    onClick={() => setView("grid")}
                     selected={view === "grid"}
                   >
                     Grid
                   </DropdownMenu.Item>
                   <DropdownMenu.Item
                     icon={<ListIcon16 />}
-                    onClick={() => onViewChange("list")}
+                    onClick={() => setView("list")}
                     selected={view === "list"}
                   >
                     List
@@ -303,7 +299,6 @@ export function NoteList({
                       search={{
                         mode: "read",
                         query: undefined,
-                        view: "grid",
                       }}
                       className="focus-ring flex h-10 items-center rounded-lg px-3 hover:bg-bg-hover coarse:h-12 coarse:p-4"
                     >

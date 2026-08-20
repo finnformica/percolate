@@ -59,7 +59,6 @@ export function NavBar() {
               search: {
                 mode: "write",
                 query: undefined,
-                view: "grid",
               },
             })
           }

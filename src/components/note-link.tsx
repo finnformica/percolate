@@ -37,7 +37,7 @@ export function NoteLink({
           className={className}
           to="/notes/$"
           params={{ _splat: id }}
-          search={{ mode: "read", query: undefined, view: "grid" }}
+          search={{ mode: "read", query: undefined }}
         />
       }
       note={note ?? null}

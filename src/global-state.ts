@@ -819,6 +819,9 @@ export const defaultFontAtom = atomWithStorage<Font>("font", "sans")
 
 export const sidebarAtom = atomWithStorage<"expanded" | "collapsed">("sidebar", "expanded")
 
+/** Grid/list layout for note lists, persisted locally (not in the URL). */
+export const noteListViewAtom = atomWithStorage<"grid" | "list">("note-list-view", "grid")
+
 export const isHelpPanelOpenAtom = atomWithStorage<boolean>("help-panel", false)
 
 export const calendarLayoutAtom = atomWithStorage<"week" | "month">("calendar-layout", "week")

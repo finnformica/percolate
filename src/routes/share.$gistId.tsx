@@ -176,7 +176,7 @@ function RouteComponent() {
                       navigate({
                         to: "/notes/$",
                         params: { _splat: userNote.id },
-                        search: { mode: "write", query: undefined, view: "grid" },
+                        search: { mode: "write", query: undefined },
                       })
                     }}
                   >

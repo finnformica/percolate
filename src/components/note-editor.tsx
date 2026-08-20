@@ -177,7 +177,6 @@ export const NoteEditor = React.forwardRef<ReactCodeMirrorRef, NoteEditorProps>(
             search: {
               mode: "read",
               query: undefined,
-              view: "grid",
             },
           }),
         ),

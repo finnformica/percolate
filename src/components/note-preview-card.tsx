@@ -64,7 +64,6 @@ const _NotePreviewCard = React.memo(function NoteCard({ id }: NoteCardProps) {
         search={{
           mode: "read",
           query: undefined,
-          view: "grid",
         }}
         className={cx(
           "card-1 rounded-[calc(var(--border-radius-base)+6px)]! relative block w-full cursor-pointer overflow-hidden -outline-offset-1",

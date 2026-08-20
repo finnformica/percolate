@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { useAtomValue } from "jotai"
+import { useAtom, useAtomValue } from "jotai"
 import React, { useDeferredValue, useMemo, useState } from "react"
 import { DropdownMenu } from "../components/dropdown-menu"
 import { IconButton } from "../components/icon-button"
@@ -14,7 +14,7 @@ import {
 import { PageLayout } from "../components/page-layout"
 import { PillButton } from "../components/pill-button"
 import { SearchInput } from "../components/search-input"
-import { sortedTagEntriesAtom, tagSearcherAtom } from "../global-state"
+import { noteListViewAtom, sortedTagEntriesAtom, tagSearcherAtom } from "../global-state"
 import { cx } from "../utils/cx"
 import { pluralize } from "../utils/pluralize"
 
@@ -28,7 +28,6 @@ const viewIcons: Record<View, React.ReactNode> = {
 type RouteSearch = {
   query: string | undefined
   sort: "name" | "count"
-  view: View
 }
 
 export const Route = createFileRoute("/_appRoot/tags/")({
@@ -36,7 +35,6 @@ export const Route = createFileRoute("/_appRoot/tags/")({
     return {
       query: typeof search.query === "string" ? search.query : undefined,
       sort: search.sort === "name" || search.sort === "count" ? search.sort : "name",
-      view: search.view === "grid" || search.view === "list" ? search.view : "list",
     }
   },
   component: RouteComponent,
@@ -46,8 +44,10 @@ export const Route = createFileRoute("/_appRoot/tags/")({
 })
 
 function RouteComponent() {
-  const { query, sort, view } = Route.useSearch()
+  const { query, sort } = Route.useSearch()
   const navigate = Route.useNavigate()
+  // Grid/list layout is a local preference, persisted outside the URL.
+  const [view, setView] = useAtom(noteListViewAtom)
 
   const sortedTagEntries = useAtomValue(sortedTagEntriesAtom)
   const tagSearcher = useAtomValue(tagSearcherAtom)
@@ -143,24 +143,14 @@ function RouteComponent() {
                   <DropdownMenu.GroupLabel>View as</DropdownMenu.GroupLabel>
                   <DropdownMenu.Item
                     icon={<GridIcon16 />}
-                    onClick={() =>
-                      navigate({
-                        search: (prev) => ({ ...prev, view: "grid" }),
-                        replace: true,
-                      })
-                    }
+                    onClick={() => setView("grid")}
                     selected={view === "grid"}
                   >
                     Grid
                   </DropdownMenu.Item>
                   <DropdownMenu.Item
                     icon={<ListIcon16 />}
-                    onClick={() =>
-                      navigate({
-                        search: (prev) => ({ ...prev, view: "list" }),
-                        replace: true,
-                      })
-                    }
+                    onClick={() => setView("list")}
                     selected={view === "list"}
                   >
                     List
@@ -180,7 +170,7 @@ function RouteComponent() {
             {searchResults.map(([tag, noteIds]) => (
               <li key={tag}>
                 <PillButton asChild>
-                  <Link to="/" search={{ query: `tag:${tag}`, view: "grid" }}>
+                  <Link to="/" search={{ query: `tag:${tag}` }}>
                     {tag}
                     <span className="text-text-secondary">{noteIds.length}</span>
                   </Link>
@@ -278,7 +268,7 @@ function TagTreeItem({ node, path = [], depth = 0 }: TagTreeItemProps) {
     <li className="flex flex-col gap-3">
       <div className="flex items-center gap-0.5" style={{ paddingLeft: `calc(${depth} * 1.5rem)` }}>
         <PillButton asChild>
-          <Link to="/" search={{ query: `tag:${[...path, node.name].join("/")}`, view: "grid" }}>
+          <Link to="/" search={{ query: `tag:${[...path, node.name].join("/")}` }}>
             {node.name}
             <span className="text-text-secondary">{node.count}</span>
           </Link>

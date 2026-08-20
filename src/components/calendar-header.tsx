@@ -47,11 +47,10 @@ export function CalendarHeader({ activeNoteId }: CalendarHeaderProps) {
         search: {
           mode: searchParams.mode ?? "read",
           query: undefined,
-          view: searchParams.view === "list" ? "list" : "grid",
         },
       })
     },
-    [isWeekly, activeNoteId, navigate, searchParams.mode, searchParams.view],
+    [isWeekly, activeNoteId, navigate, searchParams.mode],
   )
 
   const navigateToCurrentPeriod = React.useCallback(() => {
@@ -62,10 +61,9 @@ export function CalendarHeader({ activeNoteId }: CalendarHeaderProps) {
       search: {
         mode: searchParams.mode ?? "read",
         query: undefined,
-        view: searchParams.view === "list" ? "list" : "grid",
       },
     })
-  }, [isWeekly, thisWeekString, todayString, navigate, searchParams.mode, searchParams.view])
+  }, [isWeekly, thisWeekString, todayString, navigate, searchParams.mode])
 
   return (
     <div className="flex items-start justify-between gap-4">

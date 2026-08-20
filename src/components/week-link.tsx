@@ -46,7 +46,6 @@ export function WeekLink({ week, text, className }: WeekLinkProps) {
       search={{
         mode: existingNote ? "read" : "write",
         query: undefined,
-        view: "grid",
       }}
     />
   )

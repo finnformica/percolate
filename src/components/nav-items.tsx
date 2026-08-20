@@ -84,7 +84,7 @@ export function NavItems({
             <li>
               <NavLink
                 to="/"
-                search={{ query: undefined, view: "grid" }}
+                search={{ query: undefined }}
                 activeIcon={<NoteFillIcon16 />}
                 icon={<NoteIcon16 />}
                 onNavigate={onNavigate}
@@ -99,7 +99,6 @@ export function NavItems({
                 search={{
                   mode: hasDailyNote ? "read" : "write",
                   query: undefined,
-                  view: "grid",
                 }}
                 activeIcon={<CalendarDateFillIcon16 date={today.getDate()} />}
                 icon={<CalendarDateIcon16 date={today.getDate()} />}
@@ -112,7 +111,7 @@ export function NavItems({
             <li>
               <NavLink
                 to="/tags"
-                search={{ query: undefined, sort: "name", view: "list" }}
+                search={{ query: undefined, sort: "name" }}
                 activeIcon={<TagFillIcon16 />}
                 icon={<TagIcon16 />}
                 onNavigate={onNavigate}
@@ -133,7 +132,7 @@ export function NavItems({
                       key={note.id}
                       to="/notes/$"
                       params={{ _splat: note.id }}
-                      search={{ mode: "read", query: undefined, view: "grid" }}
+                      search={{ mode: "read", query: undefined }}
                       icon={
                         <NoteFavicon
                           note={note}

@@ -106,7 +106,7 @@ function GitHubSection() {
           className="shrink-0"
           onClick={() => {
             signOut()
-            navigate({ to: "/", search: { query: undefined, view: "grid" } })
+            navigate({ to: "/", search: { query: undefined } })
           }}
         >
           Sign out

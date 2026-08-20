@@ -41,7 +41,6 @@ export function useCreateNewNote() {
       search: {
         mode: "write",
         query: undefined,
-        view: "grid",
         content: content || undefined,
       },
     })

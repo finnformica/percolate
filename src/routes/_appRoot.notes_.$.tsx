@@ -71,7 +71,6 @@ import { pluralize } from "../utils/pluralize"
 type RouteSearch = {
   mode: "read" | "write"
   query: string | undefined
-  view: "grid" | "list"
   tasks?: string | undefined
   content?: string
 }
@@ -81,7 +80,6 @@ export const Route = createFileRoute("/_appRoot/notes_/$")({
     return {
       mode: search.mode === "write" ? "write" : "read",
       query: typeof search.query === "string" ? search.query : undefined,
-      view: search.view === "list" ? "list" : "grid",
       tasks: typeof search.tasks === "string" ? search.tasks : undefined,
       content: typeof search.content === "string" ? search.content : undefined,
     }
@@ -121,7 +119,7 @@ function renderTemplate(template: Template, args: Record<string, unknown> = {}) 
 function NotePage() {
   // Router
   const { _splat: noteId } = Route.useParams()
-  const { mode, query, view, content: defaultContent } = Route.useSearch()
+  const { mode, query, content: defaultContent } = Route.useSearch()
   const navigate = Route.useNavigate()
 
   // Global state
@@ -599,7 +597,7 @@ function NotePage() {
                     // Go home
                     navigate({
                       to: "/",
-                      search: { query: undefined, view: "grid" },
+                      search: { query: undefined },
                       replace: true,
                     })
                   }}
@@ -781,16 +779,9 @@ function NotePage() {
                   <NoteList
                     baseQuery={`link:"${noteId}" -id:"${noteId}"`}
                     query={query ?? ""}
-                    view={view}
                     onQueryChange={(query) =>
                       navigate({
                         search: (prev) => ({ ...prev, query }),
-                        replace: true,
-                      })
-                    }
-                    onViewChange={(view) =>
-                      navigate({
-                        search: (prev) => ({ ...prev, view }),
                         replace: true,
                       })
                     }

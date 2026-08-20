@@ -330,7 +330,6 @@ function CalendarItem({
       search={{
         mode: searchParams.mode ?? "read",
         query: undefined,
-        view: searchParams.view === "list" ? "list" : "grid",
       }}
       aria-label={ariaLabel}
       className={cx(
@@ -480,7 +479,6 @@ function MonthWeekRow({
       search={{
         mode: searchParams.mode ?? "read",
         query: undefined,
-        view: searchParams.view === "list" ? "list" : "grid",
       }}
       aria-label={label}
       className={cx(
@@ -585,7 +583,6 @@ function MonthDateCell({
       search={{
         mode: searchParams.mode ?? "read",
         query: undefined,
-        view: searchParams.view === "list" ? "list" : "grid",
       }}
       aria-label={label}
       className={cx(
