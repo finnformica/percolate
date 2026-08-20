@@ -223,7 +223,7 @@ export function BlockItem({
 
   const marker =
     type.kind === "todo" ? (
-      <span className="flex h-[1.625em] shrink-0 items-center">
+      <span className="flex h-[1lh] shrink-0 items-center">
         <input
           type="checkbox"
           checked={type.checked}
@@ -233,13 +233,13 @@ export function BlockItem({
         />
       </span>
     ) : type.kind === "bullet" ? (
-      <span className="flex h-[1.625em] shrink-0 items-center">
+      <span className="flex h-[1lh] shrink-0 items-center">
         <span aria-hidden className="size-1.5 rounded-full bg-text-secondary" />
       </span>
     ) : type.kind === "ordered" ? (
       <span
         aria-hidden
-        className="flex h-[1.625em] shrink-0 items-center tabular-nums text-text-secondary"
+        className="flex h-[1lh] shrink-0 items-center tabular-nums text-text-secondary"
       >
         {type.number}.
       </span>
@@ -300,7 +300,7 @@ export function BlockItem({
                 tabIndex={0}
                 data-testid="block-body"
                 className={cx(
-                  "min-h-[1.625em] min-w-0 flex-1 cursor-text outline-none",
+                  "min-h-[1lh] min-w-0 flex-1 cursor-text outline-none",
                   typo,
                   type.kind === "todo" && type.checked && "text-text-secondary line-through",
                 )}

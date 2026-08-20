@@ -37,23 +37,53 @@ check("heading renders", await page.getByRole("button", { name: "Project ideas" 
 check("checkbox renders", (await page.locator("input[type=checkbox]").count()) >= 2)
 check("bullet renders", await page.getByRole("button", { name: "A bullet point" }).isVisible())
 
-// --- Seamless view↔edit: text does not shift horizontally ---
-const heading = page.getByRole("button", { name: "Project ideas" })
-const viewBox = await heading.boundingBox()
-await heading.click()
-await page.keyboard.press("Enter") // select -> edit
-const ta = page.locator("textarea").first()
-await ta.waitFor()
-const editBox = await ta.boundingBox()
-await page.screenshot({ path: `${OUT}/02-editing.png` })
-const dx = Math.abs(viewBox.x - editBox.x)
-check("no horizontal shift entering edit", dx <= 2, `dx=${dx.toFixed(1)}px`)
-// The raw "# " marker is not shown in the textarea (edits the stripped body).
-check(
-  "textarea shows stripped body",
-  (await ta.inputValue()) === "Project ideas",
-  await ta.inputValue(),
-)
+// --- Seamless view↔edit: a block must not move or resize when edited ---
+// Switching a block between its rendered view and its edit textarea must not
+// shift the text horizontally OR vertically, and must not change the block's
+// height (which would nudge every block below it — the visible "shift").
+async function measureViewVsEdit(name) {
+  const view = page.getByRole("button", { name })
+  const viewBox = await view.boundingBox()
+  await view.click()
+  await page.keyboard.press("Enter") // select -> edit
+  const ta = page.locator("textarea").first()
+  await ta.waitFor()
+  const editBox = await ta.boundingBox()
+  const inputValue = await ta.inputValue()
+  return { viewBox, editBox, inputValue, ta }
+}
+
+// Screenshot the header block in both states so the pair is captured.
+await page.getByRole("button", { name: "Project ideas" }).scrollIntoViewIfNeeded()
+await page.screenshot({ path: `${OUT}/02a-viewing.png` })
+{
+  const { viewBox, editBox, inputValue } = await measureViewVsEdit("Project ideas")
+  await page.screenshot({ path: `${OUT}/02b-editing.png` })
+  const dx = Math.abs(viewBox.x - editBox.x)
+  const dy = Math.abs(viewBox.y - editBox.y)
+  const dh = Math.abs(viewBox.height - editBox.height)
+  check("heading: no horizontal shift when editing", dx <= 1, `dx=${dx.toFixed(1)}px`)
+  check("heading: no vertical shift when editing", dy <= 1, `dy=${dy.toFixed(1)}px`)
+  check("heading: block height unchanged when editing", dh <= 1, `dh=${dh.toFixed(1)}px`)
+  // The raw "# " marker is not shown in the textarea (edits the stripped body).
+  check("textarea shows stripped body", inputValue === "Project ideas", inputValue)
+  await page.keyboard.press("Escape")
+}
+
+// The same must hold for every block type — a marker'd block (bullet) and a
+// plain paragraph, not just the heading.
+for (const name of ["Some intro text", "A bullet point"]) {
+  const { viewBox, editBox } = await measureViewVsEdit(name)
+  const dx = Math.abs(viewBox.x - editBox.x)
+  const dy = Math.abs(viewBox.y - editBox.y)
+  const dh = Math.abs(viewBox.height - editBox.height)
+  check(
+    `"${name}": no shift/resize when editing`,
+    dx <= 1 && dy <= 1 && dh <= 1,
+    `dx=${dx.toFixed(1)} dy=${dy.toFixed(1)} dh=${dh.toFixed(1)}`,
+  )
+  await page.keyboard.press("Escape")
+}
 
 // --- Markdown shortcuts on an empty note ---
 await story("blockeditor--empty")
