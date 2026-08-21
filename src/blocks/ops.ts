@@ -143,6 +143,23 @@ export function indentBlock(doc: BlockDoc, id: string): BlockDoc {
   return next
 }
 
+/** Reorder a block among its siblings, carrying its subtree with it. Returns
+ * the doc unchanged when it's already at the end it's moving toward. */
+export function moveBlock(doc: BlockDoc, id: string, direction: "up" | "down"): BlockDoc {
+  const parentId = findParentId(doc, id)
+  if (parentId === undefined) return doc
+  const list = siblingList(doc, parentId)
+  const i = list.indexOf(id)
+  const j = direction === "up" ? i - 1 : i + 1
+  if (j < 0 || j >= list.length) return doc
+  const next = clone(doc)
+  const newList = [...list]
+  ;[newList[i], newList[j]] = [newList[j], newList[i]]
+  if (parentId === null) next.rootBlockIds = newList
+  else next.blocks[parentId] = { ...next.blocks[parentId], children: newList }
+  return next
+}
+
 /** Outdent a block: make it a sibling of its parent, just after it. */
 export function outdentBlock(doc: BlockDoc, id: string): BlockDoc {
   const parentId = findParentId(doc, id)

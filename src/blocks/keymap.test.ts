@@ -48,6 +48,8 @@ describe("select mode", () => {
     [{ key: "Tab", shiftKey: true }, "outdent"],
     [{ key: "ArrowUp" }, "moveSelectionUp"],
     [{ key: "ArrowDown" }, "moveSelectionDown"],
+    [{ key: "ArrowUp", altKey: true, shiftKey: true }, "moveBlockUp"],
+    [{ key: "ArrowDown", altKey: true, shiftKey: true }, "moveBlockDown"],
     [{ key: "Backspace" }, "deleteBlock"],
     [{ key: "Delete" }, "deleteBlock"],
     [{ key: "x" }, "toggleTodo"],

@@ -9,6 +9,7 @@ import {
   emptyBlock,
   indentBlock,
   insertAfter,
+  moveBlock,
   outdentBlock,
   removeBlock,
   updateContent,
@@ -163,6 +164,8 @@ export type CommandName =
   | "moveSelectionDown"
   | "moveEditFocusUp"
   | "moveEditFocusDown"
+  | "moveBlockUp"
+  | "moveBlockDown"
   | "deleteBlock"
   | "toggleTodo"
   | "toggleCollapse"
@@ -200,6 +203,18 @@ export const COMMANDS: Record<CommandName, Command> = {
   moveSelectionDown: moveSelection("down"),
   moveEditFocusUp: moveEditFocus("up"),
   moveEditFocusDown: moveEditFocus("down"),
+
+  /** Reorder the block among its siblings (subtree comes along). */
+  moveBlockUp: ({ doc, id, mode }) => {
+    const next = moveBlock(doc, id, "up")
+    if (next === doc) return { handled: true }
+    return { handled: true, doc: next, op: STRUCTURAL, focus: keepFocus(mode, id) }
+  },
+  moveBlockDown: ({ doc, id, mode }) => {
+    const next = moveBlock(doc, id, "down")
+    if (next === doc) return { handled: true }
+    return { handled: true, doc: next, op: STRUCTURAL, focus: keepFocus(mode, id) }
+  },
 
   /** Delete the highlighted block and its subtree (select mode). */
   deleteBlock: ({ doc, id }) => {

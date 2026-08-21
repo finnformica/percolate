@@ -100,6 +100,22 @@ describe("selection movement", () => {
   })
 })
 
+describe("moveBlock", () => {
+  it("reorders a block among its siblings, keeping focus on it", () => {
+    const doc = fixture()
+    const result = runCommand("moveBlockDown", input(doc, "a", { mode: "select" }))
+    expect(result.doc!.rootBlockIds).toEqual(["b", "a", "c"])
+    expect(result.focus).toEqual({ mode: "select", id: "a" })
+  })
+
+  it("consumes the key but does nothing at the boundary", () => {
+    const doc = fixture()
+    const result = runCommand("moveBlockUp", input(doc, "a"))
+    expect(result.handled).toBe(true)
+    expect(result.doc).toBeUndefined()
+  })
+})
+
 describe("deleteBlock", () => {
   it("removes a block and highlights the previous sibling", () => {
     const doc = fixture()

@@ -46,37 +46,44 @@ export interface BlockEditorApi {
   dispatchKey: (mode: Mode, id: string, event: KeyLike, caret?: CaretInput) => boolean
 }
 
-/** Extra space above a heading, proportional to its level, so sections breathe.
- * Applied to the block's outer wrapper (shared by view and edit) so switching
- * modes never shifts the text. */
-function headingTopMargin(type: BlockType): string {
+/** Extra space above a heading, proportional to its size (i.e. its outline
+ * depth), so sections breathe. Applied to the block's outer wrapper (shared by
+ * view and edit) so switching modes never shifts the text. */
+function headingTopMargin(type: BlockType, depth: number): string {
   if (type.kind !== "heading") return ""
-  switch (type.level) {
-    case 1:
+  switch (depth) {
+    case 0:
       return "mt-6"
-    case 2:
+    case 1:
       return "mt-5"
-    case 3:
+    case 2:
       return "mt-4"
     default:
       return "mt-3"
   }
 }
 
-/** Typography shared by a block's rendered view and its edit textarea, so
- * switching between them never changes the text's size or weight. */
-function typographyFor(type: BlockType): string {
+/**
+ * Typography shared by a block's rendered view and its edit textarea, so
+ * switching between them never changes the text's size or weight.
+ *
+ * Headings are sized by how deeply they're nested in the outline — not by how
+ * many `#`s were typed (the marker is normalised to a single `#` on save). The
+ * deepest level floors at body size, kept bold and underlined so it still reads
+ * as a heading rather than a paragraph.
+ */
+function typographyFor(type: BlockType, depth: number): string {
   switch (type.kind) {
     case "heading":
-      switch (type.level) {
-        case 1:
+      switch (depth) {
+        case 0:
           return "text-2xl font-bold"
-        case 2:
+        case 1:
           return "text-xl font-bold"
-        case 3:
+        case 2:
           return "text-lg font-bold"
         default:
-          return "text-base font-bold"
+          return "text-base font-bold underline"
       }
     case "quote":
       return "italic text-text-secondary"
@@ -111,7 +118,7 @@ export function BlockItem({
   // keeps the view and the editor pixel-identical — nothing shifts on click.
   const body = stripMarker(block.content)
   const prefix = block.content.slice(0, block.content.length - body.length)
-  const typo = typographyFor(type)
+  const typo = typographyFor(type, depth)
 
   // Focus and place the caret when editing starts.
   useLayoutEffect(() => {
@@ -228,7 +235,7 @@ export function BlockItem({
     ) : null
 
   return (
-    <div className={cx(headingTopMargin(type))}>
+    <div className={cx(headingTopMargin(type, depth))}>
       <div className="group relative flex items-start gap-1">
         <IconButton
           aria-label={isCollapsed ? "Expand" : "Collapse"}

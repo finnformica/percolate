@@ -69,6 +69,9 @@ export const KEYMAP: Binding[] = [
   { mode: "select", combo: "Shift+Tab", command: "outdent" },
   { mode: "select", combo: "ArrowUp", command: "moveSelectionUp" },
   { mode: "select", combo: "ArrowDown", command: "moveSelectionDown" },
+  // Option/Alt+Shift+Arrow reorders the block itself (Logseq / Workflowy).
+  { mode: "select", combo: "Alt+Shift+ArrowUp", command: "moveBlockUp" },
+  { mode: "select", combo: "Alt+Shift+ArrowDown", command: "moveBlockDown" },
   { mode: "select", combo: "Backspace", command: "deleteBlock" },
   { mode: "select", combo: "Delete", command: "deleteBlock" },
   { mode: "select", combo: "x", command: "toggleTodo" },
@@ -78,6 +81,8 @@ export const KEYMAP: Binding[] = [
   { mode: "edit", combo: "Escape", command: "exitEdit" },
   { mode: "edit", combo: "Tab", command: "indent" },
   { mode: "edit", combo: "Shift+Tab", command: "outdent" },
+  { mode: "edit", combo: "Alt+Shift+ArrowUp", command: "moveBlockUp" },
+  { mode: "edit", combo: "Alt+Shift+ArrowDown", command: "moveBlockDown" },
   // Shift-Enter is a plain line break: split at the caret with no list marker.
   { mode: "edit", combo: "Shift+Enter", command: "splitPlain" },
   // Enter: empty list item exits the list; caret-at-end appends a fresh block;
