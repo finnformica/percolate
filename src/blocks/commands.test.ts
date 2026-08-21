@@ -109,6 +109,38 @@ describe("selection movement", () => {
   })
 })
 
+describe("sibling & level navigation", () => {
+  it("jumps to the previous / next sibling, skipping nested blocks", () => {
+    const doc = fixture()
+    expect(runCommand("nextSibling", input(doc, "b")).focus).toEqual({ mode: "select", id: "c" })
+    expect(runCommand("prevSibling", input(doc, "b")).focus).toEqual({ mode: "select", id: "a" })
+  })
+
+  it("stops at the ends of a sibling group", () => {
+    const doc = fixture()
+    expect(runCommand("prevSibling", input(doc, "a")).focus).toBeUndefined()
+    // b1 is an only child, so it has no siblings to move to.
+    expect(runCommand("nextSibling", input(doc, "b1")).focus).toBeUndefined()
+  })
+
+  it("jumps to the top of the level, then up to the parent", () => {
+    const doc = fixture()
+    expect(runCommand("jumpLevelTop", input(doc, "c")).focus).toEqual({ mode: "select", id: "a" })
+    // b1's level has one item; already at top, so step up to parent b.
+    expect(runCommand("jumpLevelTop", input(doc, "b1")).focus).toEqual({ mode: "select", id: "b" })
+    // a is already the first root block — nowhere further up.
+    expect(runCommand("jumpLevelTop", input(doc, "a")).focus).toBeUndefined()
+  })
+
+  it("jumps to the bottom of the level", () => {
+    const doc = fixture()
+    expect(runCommand("jumpLevelBottom", input(doc, "a")).focus).toEqual({
+      mode: "select",
+      id: "c",
+    })
+  })
+})
+
 describe("moveBlock", () => {
   it("reorders a block among its siblings, keeping focus on it", () => {
     const doc = fixture()

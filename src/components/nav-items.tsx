@@ -118,15 +118,19 @@ export function NavItems({
           {notes.length > 0 ? (
             <ul className="flex flex-col gap-1 border-t border-border-secondary pt-3">
               {notes.map((note) => (
-                <li key={note.id} className="group/note relative flex">
+                <li key={note.id} className="group/note flex items-center">
                   <NoteNavItem note={note} size={size} onNavigate={onNavigate} />
-                  {/* A per-note actions menu on hover. It's absolutely
-                      positioned (out of flow) so the name always truncates to
-                      the full row width — the ellipsis never leaves a gap for a
-                      button. A gradient masks the name's tail behind it. */}
-                  <div className="absolute inset-y-0 right-0 hidden items-center rounded-r bg-linear-to-l from-bg-hover from-60% to-transparent pl-8 pr-1 group-hover/note:flex has-data-[popup-open]:flex">
-                    <NoteActionsMenu note={note} />
-                  </div>
+                  {/* The actions menu is display:none until hover (so the note
+                      name uses the full width and its ellipsis never reserves a
+                      gap); on hover it takes its place inline and the name
+                      truncates to make room. Stays shown while its menu is open. */}
+                  <NoteActionsMenu
+                    noteId={note.id}
+                    content={note.content}
+                    pinned={note.pinned}
+                    backlinks={note.backlinks}
+                    className="hidden group-hover/note:inline-flex has-data-[popup-open]:inline-flex"
+                  />
                 </li>
               ))}
             </ul>

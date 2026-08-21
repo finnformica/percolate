@@ -53,13 +53,13 @@ function headingTopMargin(type: BlockType, depth: number): string {
   if (type.kind !== "heading") return ""
   switch (depth) {
     case 0:
-      return "mt-6"
-    case 1:
-      return "mt-5"
-    case 2:
-      return "mt-4"
-    default:
       return "mt-3"
+    case 1:
+      return "mt-2"
+    case 2:
+      return "mt-1.5"
+    default:
+      return "mt-1"
   }
 }
 
@@ -237,32 +237,34 @@ export function BlockItem({
   return (
     <div className={cx(headingTopMargin(type, depth))}>
       <div className="group relative flex items-start gap-1">
-        <IconButton
-          aria-label={isCollapsed ? "Expand" : "Collapse"}
-          size="small"
-          disableTooltip
-          tabIndex={-1}
-          onClick={() => api.toggleCollapse(block.id)}
-          className={cx(
-            // Match the block's typography so the toggle scales with the text
-            // and centres on the first line (a big heading gets a taller,
-            // aligned toggle instead of a small one stuck at the top).
-            "h-[1lh] w-6 shrink-0 font-content leading-relaxed",
-            typo,
-            "text-text-tertiary",
-            !hasChildren && "pointer-events-none opacity-0",
-          )}
-        >
-          <svg
-            width="8"
-            height="8"
-            viewBox="0 0 8 8"
-            aria-hidden
-            className={cx("transition-transform", isCollapsed ? "rotate-0" : "rotate-90")}
-          >
-            <path d="M2 1l4 3-4 3z" fill="currentColor" />
-          </svg>
-        </IconButton>
+        {/* The toggle stays a fixed square; the wrapper mirrors the content
+            cell's padding + line-height (via `typo`) and centres the square on
+            the block's first line, so it aligns whatever the heading size. */}
+        <div className={cx("flex shrink-0 py-0.5 font-content leading-relaxed", typo)}>
+          <span className="flex h-[1lh] items-center">
+            <IconButton
+              aria-label={isCollapsed ? "Expand" : "Collapse"}
+              size="small"
+              disableTooltip
+              tabIndex={-1}
+              onClick={() => api.toggleCollapse(block.id)}
+              className={cx(
+                "size-6 shrink-0 p-0 text-text-tertiary",
+                !hasChildren && "pointer-events-none opacity-0",
+              )}
+            >
+              <svg
+                width="8"
+                height="8"
+                viewBox="0 0 8 8"
+                aria-hidden
+                className={cx("transition-transform", isCollapsed ? "rotate-0" : "rotate-90")}
+              >
+                <path d="M2 1l4 3-4 3z" fill="currentColor" />
+              </svg>
+            </IconButton>
+          </span>
+        </div>
 
         <div className="min-w-0 flex-1 py-0.5 font-content leading-relaxed">
           <div
@@ -317,7 +319,8 @@ export function BlockItem({
       </div>
 
       {hasChildren && !isCollapsed ? (
-        <div className="ml-2.5 border-l border-border-secondary pl-3">
+        // Left margin puts the guide line under the toggle's centre (w-6 → 12px).
+        <div className="ml-3 border-l border-border-secondary pl-3">
           {block.children.map((childId) => {
             const child = doc.blocks[childId]
             if (!child) return null

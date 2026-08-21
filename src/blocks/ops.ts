@@ -32,6 +32,21 @@ function siblingList(doc: BlockDoc, parentId: string | null): string[] {
   return parentId === null ? doc.rootBlockIds : doc.blocks[parentId].children
 }
 
+/**
+ * A block's place in the tree: its parent (null at the root), the ordered ids of
+ * its sibling group, and its own index within them. `null` if the block is
+ * unknown. Used by sibling / level navigation.
+ */
+export function siblingsOf(
+  doc: BlockDoc,
+  id: string,
+): { parentId: string | null; siblings: string[]; index: number } | null {
+  const parentId = findParentId(doc, id)
+  if (parentId === undefined) return null
+  const siblings = siblingList(doc, parentId)
+  return { parentId, siblings, index: siblings.indexOf(id) }
+}
+
 export function updateContent(doc: BlockDoc, id: string, content: string): BlockDoc {
   const block = doc.blocks[id]
   if (!block) return doc

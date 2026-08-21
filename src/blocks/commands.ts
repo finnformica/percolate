@@ -12,6 +12,7 @@ import {
   moveBlock,
   outdentBlock,
   removeBlock,
+  siblingsOf,
   updateContent,
 } from "./ops"
 import type { BlockDoc } from "./types"
@@ -122,6 +123,18 @@ function moveSelection(direction: "up" | "down"): Command {
   }
 }
 
+/** Move the highlight (or edit focus) to the previous / next sibling, skipping
+ * whatever is nested between them. */
+function siblingJump(direction: "prev" | "next"): Command {
+  return ({ doc, id, mode }) => {
+    const info = siblingsOf(doc, id)
+    if (!info) return { handled: true }
+    const target = direction === "prev" ? info.index - 1 : info.index + 1
+    if (target < 0 || target >= info.siblings.length) return { handled: true }
+    return { handled: true, focus: keepFocus(mode, info.siblings[target]) }
+  }
+}
+
 /** Move edit focus to the adjacent block when an arrow leaves the current one. */
 function moveEditFocus(direction: "up" | "down"): Command {
   return ({ id, visibleOrder }) => {
@@ -169,6 +182,10 @@ export type CommandName =
   | "moveSelectionDown"
   | "moveEditFocusUp"
   | "moveEditFocusDown"
+  | "prevSibling"
+  | "nextSibling"
+  | "jumpLevelTop"
+  | "jumpLevelBottom"
   | "moveBlockUp"
   | "moveBlockDown"
   | "deleteBlock"
@@ -208,6 +225,27 @@ export const COMMANDS: Record<CommandName, Command> = {
   moveSelectionDown: moveSelection("down"),
   moveEditFocusUp: moveEditFocus("up"),
   moveEditFocusDown: moveEditFocus("down"),
+
+  /** Move to the previous / next sibling at the same level, skipping any
+   * descendants in between (e.g. jump header→header across their children). */
+  prevSibling: siblingJump("prev"),
+  nextSibling: siblingJump("next"),
+
+  /** Jump to the top of the current level (its first sibling); if already there,
+   * step up to the parent. Walks up levels rather than to the page top. */
+  jumpLevelTop: ({ doc, id, mode }) => {
+    const info = siblingsOf(doc, id)
+    if (!info) return { handled: true }
+    if (info.index > 0) return { handled: true, focus: keepFocus(mode, info.siblings[0]) }
+    if (info.parentId) return { handled: true, focus: keepFocus(mode, info.parentId) }
+    return { handled: true }
+  },
+  /** Jump to the bottom of the current level (its last sibling). */
+  jumpLevelBottom: ({ doc, id, mode }) => {
+    const info = siblingsOf(doc, id)
+    if (!info || info.index >= info.siblings.length - 1) return { handled: true }
+    return { handled: true, focus: keepFocus(mode, info.siblings[info.siblings.length - 1]) }
+  },
 
   /** Reorder the block among its siblings (subtree comes along). */
   moveBlockUp: ({ doc, id, mode }) => {

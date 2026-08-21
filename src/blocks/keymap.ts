@@ -69,9 +69,16 @@ export const KEYMAP: Binding[] = [
   { mode: "select", combo: "Shift+Tab", command: "outdent" },
   { mode: "select", combo: "ArrowUp", command: "moveSelectionUp" },
   { mode: "select", combo: "ArrowDown", command: "moveSelectionDown" },
-  // Option/Alt+Shift+Arrow reorders the block itself (Logseq / Workflowy).
-  { mode: "select", combo: "Alt+Shift+ArrowUp", command: "moveBlockUp" },
-  { mode: "select", combo: "Alt+Shift+ArrowDown", command: "moveBlockDown" },
+  // Option/Alt+Arrow jumps across siblings at the same level (skipping children).
+  { mode: "select", combo: "Alt+ArrowUp", command: "prevSibling" },
+  { mode: "select", combo: "Alt+ArrowDown", command: "nextSibling" },
+  // Cmd/Ctrl+Arrow jumps to the top / bottom of the current level (walking up
+  // levels, not to the page top).
+  { mode: "select", combo: "Mod+ArrowUp", command: "jumpLevelTop" },
+  { mode: "select", combo: "Mod+ArrowDown", command: "jumpLevelBottom" },
+  // Cmd/Ctrl+Shift+Arrow reorders the block itself (Notion convention).
+  { mode: "select", combo: "Mod+Shift+ArrowUp", command: "moveBlockUp" },
+  { mode: "select", combo: "Mod+Shift+ArrowDown", command: "moveBlockDown" },
   { mode: "select", combo: "Backspace", command: "deleteBlock" },
   { mode: "select", combo: "Delete", command: "deleteBlock" },
   { mode: "select", combo: "x", command: "toggleTodo" },
@@ -81,8 +88,12 @@ export const KEYMAP: Binding[] = [
   { mode: "edit", combo: "Escape", command: "exitEdit" },
   { mode: "edit", combo: "Tab", command: "indent" },
   { mode: "edit", combo: "Shift+Tab", command: "outdent" },
-  { mode: "edit", combo: "Alt+Shift+ArrowUp", command: "moveBlockUp" },
-  { mode: "edit", combo: "Alt+Shift+ArrowDown", command: "moveBlockDown" },
+  { mode: "edit", combo: "Alt+ArrowUp", command: "prevSibling" },
+  { mode: "edit", combo: "Alt+ArrowDown", command: "nextSibling" },
+  { mode: "edit", combo: "Mod+ArrowUp", command: "jumpLevelTop" },
+  { mode: "edit", combo: "Mod+ArrowDown", command: "jumpLevelBottom" },
+  { mode: "edit", combo: "Mod+Shift+ArrowUp", command: "moveBlockUp" },
+  { mode: "edit", combo: "Mod+Shift+ArrowDown", command: "moveBlockDown" },
   // Shift-Enter is a plain line break: split at the caret with no list marker.
   { mode: "edit", combo: "Shift+Enter", command: "splitPlain" },
   // Enter: empty list item exits the list; caret-at-end appends a fresh block;
