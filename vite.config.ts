@@ -60,7 +60,7 @@ export default defineConfig({
     nodePolyfills(),
   ],
   build: {
-    // This is a rich editor app (CodeMirror + the full markdown/unified stack),
+    // This is a rich editor app (the full markdown/unified + block editor stack),
     // so the bundle is legitimately large. Raise the size-warning threshold
     // rather than manually splitting vendors: separating React into its own
     // chunk broke module init order at runtime (React resolved to undefined).

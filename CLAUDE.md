@@ -47,7 +47,7 @@ Ruminate is a simple note-taking web application built with React and TypeScript
 ### Key Components
 
 - **Note System**: Notes are parsed from markdown files with frontmatter support
-- **Editor**: Built on CodeMirror 6 with custom extensions for wikilinks, frontmatter, and markdown features
+- **Editor**: A custom block/outline editor (Logseq-style) that parses each note into blocks (`src/components/block-editor/`, `src/blocks/`)
 - **Routing**: Uses TanStack Router for file-based routing
 - **Templates**: Support for note templates with input variables
 - **Voice Assistant**: OpenAI integration for voice conversations
@@ -64,7 +64,7 @@ Ruminate is a simple note-taking web application built with React and TypeScript
 
 - **Frontend**: React 18, TypeScript, Vite
 - **Styling**: Tailwind CSS with custom design system
-- **Editor**: CodeMirror 6 with custom extensions
+- **Editor**: Custom block/outline editor (`src/components/block-editor/`)
 - **State**: XState + Jotai
 - **Git**: isomorphic-git + lightning-fs
 - **Routing**: TanStack Router (file-based)
@@ -77,7 +77,8 @@ Ruminate is a simple note-taking web application built with React and TypeScript
 - `src/routes/` - TanStack Router route definitions
 - `src/hooks/` - Custom React hooks
 - `src/utils/` - Utility functions and helpers
-- `src/codemirror-extensions/` - Custom CodeMirror extensions
+- `src/components/block-editor/` - The block/outline editor
+- `src/blocks/` - Block parsing, serialization, and operations
 - `src/remark-plugins/` - Custom remark plugins for markdown processing
 - `src/styles/` - CSS files and styling
 - `worker/` - Cloudflare Worker (serves the SPA + API routes)
