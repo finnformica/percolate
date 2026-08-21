@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useAtom, useAtomValue } from "jotai"
+import { useAtomValue } from "jotai"
 import { useState } from "react"
 import { useNetworkState } from "react-use"
 import { Button } from "../components/button"
@@ -9,14 +9,12 @@ import { LoadingIcon16, SettingsIcon16 } from "../components/icons"
 import { PageLayout } from "../components/page-layout"
 import { RepoForm } from "../components/repo-form"
 import { Signature } from "../components/signature"
-import { Switch } from "../components/switch"
 import {
   githubRepoAtom,
   githubUserAtom,
   isCloningRepoAtom,
   isRepoClonedAtom,
   isRepoNotClonedAtom,
-  vimModeAtom,
 } from "../global-state"
 
 export const Route = createFileRoute("/_appRoot/settings")({
@@ -32,7 +30,6 @@ function RouteComponent() {
       <div className="p-4 pb-6">
         <div className="mx-auto flex max-w-xl flex-col gap-6">
           <GitHubSection />
-          <EditorSection />
           <div className="p-5 text-text-tertiary self-center flex flex-col gap-3 items-center">
             <span className="text-sm">
               Made by{" "}
@@ -143,21 +140,6 @@ function GitHubSection() {
             </Button>
           </div>
         ) : null}
-      </div>
-    </SettingsSection>
-  )
-}
-
-function EditorSection() {
-  const [vimMode, setVimMode] = useAtom(vimModeAtom)
-
-  return (
-    <SettingsSection title="Editor">
-      <div className="flex items-center gap-2.5 leading-4">
-        <Switch id="vim-mode" checked={vimMode} onCheckedChange={setVimMode} />
-        <label htmlFor="vim-mode" className="select-none">
-          Vim mode
-        </label>
       </div>
     </SettingsSection>
   )

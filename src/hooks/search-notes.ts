@@ -32,27 +32,3 @@ export function useSearchNotes() {
 
   return searchNotes
 }
-
-// The same as useSearchNotes except the function value doesn't change when the notes change.
-// This is useful for implementing note autocomplete in CodeMirror.
-export function useStableSearchNotes() {
-  const sortedNotes = useAtomValue(sortedNotesAtom)
-  const noteSearcher = useAtomValue(noteSearcherAtom)
-
-  const sortedNotesRef = React.useRef(sortedNotes)
-  const noteSearcherRef = React.useRef(noteSearcher)
-
-  React.useEffect(() => {
-    sortedNotesRef.current = sortedNotes
-  }, [sortedNotes])
-
-  React.useEffect(() => {
-    noteSearcherRef.current = noteSearcher
-  }, [noteSearcher])
-
-  const searchNotes = React.useCallback((query: string) => {
-    return runSearch(query, sortedNotesRef.current, noteSearcherRef.current)
-  }, [])
-
-  return searchNotes
-}

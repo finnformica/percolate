@@ -62,7 +62,6 @@ const _NotePreviewCard = React.memo(function NoteCard({ id }: NoteCardProps) {
         to="/notes/$"
         params={{ _splat: id }}
         search={{
-          mode: "read",
           query: undefined,
         }}
         className={cx(

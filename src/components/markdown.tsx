@@ -8,7 +8,7 @@ import rehypeRaw from "rehype-raw"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
 import { z } from "zod"
-import { UPLOADS_DIR } from "../hooks/attach-file"
+import { UPLOADS_DIR } from "../utils/uploads"
 import { useNoteById, useSaveNote } from "../hooks/note"
 import { useMoveTask } from "../hooks/task"
 import { generateNoteId } from "../utils/note-id"
@@ -921,7 +921,6 @@ function NoteEmbed({ id }: NoteEmbedProps) {
           to="/notes/$"
           params={{ _splat: id }}
           search={{
-            mode: "read",
             query: undefined,
           }}
         >

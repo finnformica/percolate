@@ -747,7 +747,7 @@ export const noteSearcherAtom = atom((get) => {
 // Tags
 // -----------------------------------------------------------------------------
 
-export const tagsAtom = atom((get) => {
+const tagsAtom = atom((get) => {
   const notes = get(notesAtom)
   const tags: Record<string, NoteId[]> = {}
 
@@ -783,7 +783,7 @@ export const tagSearcherAtom = atom((get) => {
 // Templates
 // -----------------------------------------------------------------------------
 
-export const templatesAtom = atom((get) => {
+const templatesAtom = atom((get) => {
   const notes = get(notesAtom)
   const templates: Record<string, Template> = {}
 
@@ -819,8 +819,6 @@ export const weeklyTemplateAtom = selectAtom(templatesAtom, (templates) =>
 // -----------------------------------------------------------------------------
 // UI state
 // -----------------------------------------------------------------------------
-
-export const vimModeAtom = atomWithStorage<boolean>("vim-mode", false)
 
 export const defaultFontAtom = atomWithStorage<Font>("font", "sans")
 

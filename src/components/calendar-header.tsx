@@ -1,5 +1,5 @@
 import { addDays, addWeeks, parseISO, startOfToday } from "date-fns"
-import { useNavigate, useSearch } from "@tanstack/react-router"
+import { useNavigate } from "@tanstack/react-router"
 import React from "react"
 import {
   formatDate,
@@ -20,7 +20,6 @@ type CalendarHeaderProps = {
 
 export function CalendarHeader({ activeNoteId }: CalendarHeaderProps) {
   const navigate = useNavigate()
-  const searchParams = useSearch({ strict: false })
   const isWeekly = isValidWeekString(activeNoteId)
 
   const primaryText = isWeekly ? formatWeek(activeNoteId) : formatDate(activeNoteId)
@@ -45,12 +44,11 @@ export function CalendarHeader({ activeNoteId }: CalendarHeaderProps) {
         to: "/notes/$",
         params: { _splat: target },
         search: {
-          mode: searchParams.mode ?? "read",
           query: undefined,
         },
       })
     },
-    [isWeekly, activeNoteId, navigate, searchParams.mode],
+    [isWeekly, activeNoteId, navigate],
   )
 
   const navigateToCurrentPeriod = React.useCallback(() => {
@@ -59,11 +57,10 @@ export function CalendarHeader({ activeNoteId }: CalendarHeaderProps) {
       to: "/notes/$",
       params: { _splat: target },
       search: {
-        mode: searchParams.mode ?? "read",
         query: undefined,
       },
     })
-  }, [isWeekly, thisWeekString, todayString, navigate, searchParams.mode])
+  }, [isWeekly, thisWeekString, todayString, navigate])
 
   return (
     <div className="flex items-start justify-between gap-4">

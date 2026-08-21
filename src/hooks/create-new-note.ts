@@ -39,7 +39,6 @@ export function useCreateNewNote() {
       to: "/notes/$",
       params: { _splat: noteId },
       search: {
-        mode: "write",
         query: undefined,
         content: content || undefined,
       },

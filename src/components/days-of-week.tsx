@@ -31,7 +31,6 @@ function Day({ date }: { date: string }) {
         to="/notes/$"
         params={{ _splat: date }}
         search={{
-          mode: "write",
           query: undefined,
         }}
         className="focus-ring aspect-[5/3] rounded-[calc(var(--border-radius-base)+6px)] border border-dashed border-border-secondary p-4 font-content hover:border-border"

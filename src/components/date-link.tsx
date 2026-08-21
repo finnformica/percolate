@@ -46,7 +46,6 @@ export function DateLink({ date, text, className }: DateLinkProps) {
       to="/notes/$"
       params={{ _splat: date }}
       search={{
-        mode: existingNote ? "read" : "write",
         query: undefined,
       }}
     />

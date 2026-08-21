@@ -1,6 +1,4 @@
-import { Vim } from "@replit/codemirror-vim"
 import { createFileRoute } from "@tanstack/react-router"
-import { ReactCodeMirrorRef } from "@uiw/react-codemirror"
 import copy from "copy-to-clipboard"
 import ejs from "ejs"
 import { useAtomValue } from "jotai"
@@ -22,11 +20,9 @@ import {
   CopyIcon16,
   EditIcon16,
   ExternalLinkIcon16,
-  GlobeIcon16,
   LoadingIcon16,
   MoreIcon16,
   NoteIcon16,
-  PaperclipIcon16,
   PinFillIcon16,
   PinIcon16,
   PrinterIcon16,
@@ -38,51 +34,34 @@ import {
 } from "../components/icons"
 import { BlockNoteEditor } from "../components/block-editor/block-note-editor"
 import { NoteTitle } from "../components/block-editor/note-title"
-import { InsertTemplateDialog, removeFrontmatterComments } from "../components/insert-template"
 import { DayActivity } from "../components/day-activity"
 import { LinkHighlightProvider } from "../components/link-highlight-provider"
-import { Markdown } from "../components/markdown"
-import { NoteEditor } from "../components/note-editor"
 import { NoteFavicon } from "../components/note-favicon"
 import { NoteList } from "../components/note-list"
 import { PageLayout } from "../components/page-layout"
-import { PillButton } from "../components/pill-button"
-import { SegmentedControl } from "../components/segmented-control"
 import { ShareDialog } from "../components/share-dialog"
 import { isSyncingAtom } from "../components/sync-status"
-import { Tooltip } from "../components/tooltip"
 import {
   dailyTemplateAtom,
   defaultFontAtom,
   githubRepoAtom,
   globalStateMachineAtom,
   isSignedOutAtom,
-  vimModeAtom,
   weeklyTemplateAtom,
 } from "../global-state"
-import { useAttachFile } from "../hooks/attach-file"
 import { useDeleteNote, useNoteById, useRenameNote, useSaveNote } from "../hooks/note"
 import { useSearchNotes } from "../hooks/search-notes"
-import { useValueRef } from "../hooks/value-ref"
 import { Note, NoteId, Template, Width, fontSchema, widthSchema } from "../schema"
 import { cx } from "../utils/cx"
-import {
-  formatDate,
-  formatWeek,
-  isValidDateString,
-  isValidWeekString,
-  toDateString,
-} from "../utils/date"
-import { updateFrontmatterValue } from "../utils/frontmatter"
+import { isValidDateString, isValidWeekString, toDateString } from "../utils/date"
+import { removeFrontmatterComments, updateFrontmatterValue } from "../utils/frontmatter"
 import { clearNoteDraft, getNoteDraft, setNoteDraft } from "../utils/note-draft"
 import { getInvalidNoteIdCharacters } from "../utils/note-id"
 import { parseNote } from "../utils/parse-note"
 import { pluralize } from "../utils/pluralize"
 
 type RouteSearch = {
-  mode: "read" | "write"
   query: string | undefined
-  tasks?: string | undefined
   content?: string
   /** Heading text to highlight in the block editor on landing (from Cmd-K). */
   heading?: string
@@ -91,9 +70,7 @@ type RouteSearch = {
 export const Route = createFileRoute("/_appRoot/notes_/$")({
   validateSearch: (search: Record<string, unknown>): RouteSearch => {
     return {
-      mode: search.mode === "write" ? "write" : "read",
       query: typeof search.query === "string" ? search.query : undefined,
-      tasks: typeof search.tasks === "string" ? search.tasks : undefined,
       content: typeof search.content === "string" ? search.content : undefined,
       heading: typeof search.heading === "string" ? search.heading : undefined,
     }
@@ -121,8 +98,6 @@ function RouteComponent() {
   )
 }
 
-const toggleModeShortcut = ["⌘", "E"]
-
 function renderTemplate(template: Template, args: Record<string, unknown> = {}) {
   let text = ejs.render(template.body, args)
   text = removeFrontmatterComments(text)
@@ -133,7 +108,7 @@ function renderTemplate(template: Template, args: Record<string, unknown> = {}) 
 function NotePage() {
   // Router
   const { _splat: noteId } = Route.useParams()
-  const { mode, query, content: defaultContent, heading: highlightHeading } = Route.useSearch()
+  const { query, content: defaultContent, heading: highlightHeading } = Route.useSearch()
   const navigate = Route.useNavigate()
 
   // Global state
@@ -154,10 +129,9 @@ function NotePage() {
   // calendar time machine). "Today" is resolved in the current timezone, to
   // match the floating YYYY-MM-DD note naming.
   const isReadOnlyDailyNote = isDailyNote && noteId !== toDateString(new Date())
-  // Regular notes and today's editable daily note use the block editor; weekly
-  // notes keep the classic editor; past/future daily notes render read-only
-  // history (see DayActivity below).
-  const useBlockEditor = !isWeeklyNote && !isReadOnlyDailyNote
+  // Every editable note uses the block editor; only past/future daily notes are
+  // the exception, rendering read-only git history (see DayActivity below).
+  const useBlockEditor = !isReadOnlyDailyNote
   const searchNotes = useSearchNotes()
   const saveNote = useSaveNote()
   const backlinks = React.useMemo(() => {
@@ -166,7 +140,6 @@ function NotePage() {
   }, [noteId, searchNotes])
 
   // Editor state
-  const editorRef = React.useRef<ReactCodeMirrorRef>(null)
   const { editorValue, setEditorValue, isDraft, discardChanges } = useEditorValue({
     noteId: noteId ?? "",
     note,
@@ -178,12 +151,10 @@ function NotePage() {
           ? renderTemplate(weeklyTemplate, { week: noteId ?? "" })
           : "",
   })
-  const vimMode = useAtomValue(vimModeAtom)
   const parsedNote = React.useMemo(
     () => parseNote(noteId ?? "", editorValue),
     [noteId, editorValue],
   )
-  const [isDraggingFile, setIsDraggingFile] = React.useState(false)
 
   // Resolve font (frontmatter font or default)
   const frontmatterFont = parsedNote?.frontmatter?.font
@@ -215,7 +186,6 @@ function NotePage() {
   // Actions
   const deleteNote = useDeleteNote()
   const renameNote = useRenameNote()
-  const attachFile = useAttachFile()
 
   const handleSave = React.useCallback(
     (value: string) => {
@@ -336,59 +306,7 @@ function NotePage() {
     renameTo(raw)
   }, [noteId, renameTo])
 
-  const switchToWriting = React.useCallback(() => {
-    // Past/future daily notes are read-only history — never enter write mode.
-    if (isReadOnlyDailyNote) return
-    navigate({ search: (prev) => ({ ...prev, mode: "write" }), replace: true })
-    setTimeout(() => {
-      editorRef.current?.view?.focus()
-    })
-  }, [navigate, isReadOnlyDailyNote])
-
-  const switchToReading = React.useCallback(() => {
-    navigate({ search: (prev) => ({ ...prev, mode: "read" }), replace: true })
-  }, [navigate])
-
-  const toggleMode = React.useCallback(() => {
-    if (mode === "read") {
-      switchToWriting()
-    } else {
-      switchToReading()
-    }
-  }, [mode, switchToWriting, switchToReading])
-
-  // Value refs
-  // These refs allow us to access the latest values of these variables inside callbacks and effects
-  // without having to include them in dependency arrays, which could cause unnecessary re-renders.
-  const handleSaveRef = useValueRef(handleSave)
-  const editorValueRef = useValueRef(editorValue)
-  const switchToReadingRef = useValueRef(switchToReading)
-  const isDraftRef = useValueRef(isDraft)
-
-  // Keyboard shortcuts
-  useHotkeys(
-    "mod+e",
-    (event) => {
-      toggleMode()
-      event.preventDefault()
-    },
-    {
-      enableOnFormTags: true,
-      enableOnContentEditable: true,
-    },
-  )
-
-  useHotkeys(
-    "i",
-    (event) => {
-      switchToWriting()
-      event.preventDefault()
-    },
-    {
-      enabled: vimMode && mode === "read",
-    },
-  )
-
+  // Save with ⌘S
   useHotkeys(
     "mod+s",
     (event) => {
@@ -400,47 +318,6 @@ function NotePage() {
       enableOnContentEditable: true,
     },
   )
-
-  useHotkeys(
-    "mod+enter",
-    (event) => {
-      handleSave(editorValue)
-      switchToReading()
-      event.preventDefault()
-    },
-    {
-      enableOnFormTags: true,
-      enableOnContentEditable: true,
-    },
-  )
-
-  // Vim commands
-
-  useEffect(() => {
-    // :w - Save
-    Vim.defineEx("w", "w", () => {
-      handleSaveRef.current(editorValueRef.current)
-    })
-
-    // :x - Save and switch to read mode
-    Vim.defineEx("x", "x", () => {
-      handleSaveRef.current(editorValueRef.current)
-      switchToReadingRef.current()
-    })
-
-    // :wq - Save and switch to read mode
-    Vim.defineEx("wq", "wq", () => {
-      handleSaveRef.current(editorValueRef.current)
-      switchToReadingRef.current()
-    })
-
-    // :q - Switch to read mode if there are no changes
-    Vim.defineEx("q", "q", () => {
-      if (!isDraftRef.current) {
-        switchToReadingRef.current()
-      }
-    })
-  }, [handleSaveRef, editorValueRef, switchToReadingRef, isDraftRef])
 
   return (
     <PageLayout
@@ -467,66 +344,7 @@ function NotePage() {
             </Button>
           ) : null}
 
-          {!useBlockEditor && !isReadOnlyDailyNote ? (
-            <SegmentedControl aria-label="Mode" size="small" className="hidden sm:flex">
-              {mode === "read" ? (
-                <SegmentedControl.Segment selected onClick={switchToReading}>
-                  View
-                </SegmentedControl.Segment>
-              ) : (
-                <Tooltip>
-                  <Tooltip.Trigger
-                    render={
-                      <SegmentedControl.Segment onClick={switchToReading}>
-                        View
-                      </SegmentedControl.Segment>
-                    }
-                  />
-                  <Tooltip.Content side="bottom" className="text-text-secondary">
-                    {toggleModeShortcut}
-                  </Tooltip.Content>
-                </Tooltip>
-              )}
-              {mode === "write" ? (
-                <SegmentedControl.Segment selected onClick={switchToWriting}>
-                  Edit
-                </SegmentedControl.Segment>
-              ) : (
-                <Tooltip>
-                  <Tooltip.Trigger
-                    render={
-                      <SegmentedControl.Segment onClick={switchToWriting}>
-                        Edit
-                      </SegmentedControl.Segment>
-                    }
-                  />
-                  <Tooltip.Content side="bottom" className="text-text-secondary">
-                    {toggleModeShortcut}
-                  </Tooltip.Content>
-                </Tooltip>
-              )}
-            </SegmentedControl>
-          ) : null}
           <div className="flex items-center">
-            {!useBlockEditor && !isReadOnlyDailyNote ? (
-              <IconButton
-                aria-label="Attach file"
-                size="small"
-                onClick={() => {
-                  const input = document.createElement("input")
-                  input.type = "file"
-                  input.onchange = (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0]
-                    if (file) {
-                      attachFile(file, editorRef.current?.view)
-                    }
-                  }
-                  input.click()
-                }}
-              >
-                <PaperclipIcon16 />
-              </IconButton>
-            ) : null}
             <IconButton
               aria-label={parsedNote?.pinned ? "Unpin" : "Pin"}
               size="small"
@@ -556,7 +374,6 @@ function NotePage() {
                       icon={<UndoIcon16 />}
                       onClick={() => {
                         discardChanges()
-                        editorRef.current?.view?.focus()
                       }}
                     >
                       Discard changes
@@ -573,7 +390,6 @@ function NotePage() {
                         selected={resolvedWidth === "fixed"}
                         onClick={() => {
                           updateWidth("fixed")
-                          editorRef.current?.view?.focus()
                         }}
                       >
                         Fixed
@@ -583,7 +399,6 @@ function NotePage() {
                         selected={resolvedWidth === "full"}
                         onClick={() => {
                           updateWidth("full")
-                          editorRef.current?.view?.focus()
                         }}
                       >
                         Full
@@ -706,19 +521,7 @@ function NotePage() {
         ) : null
       }
     >
-      <InsertTemplateDialog />
-      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
-      <div
-        ref={containerRef}
-        className="@container"
-        onMouseDown={(event) => {
-          // Double click to edit (read-only history days can't be edited)
-          if (mode === "read" && event.detail > 1 && !isReadOnlyDailyNote) {
-            event.preventDefault()
-            switchToWriting()
-          }
-        }}
-      >
+      <div ref={containerRef} className="@container">
         <div className="p-5 @[640px]:p-10">
           <div
             className={cx(
@@ -735,7 +538,9 @@ function NotePage() {
 
             {useBlockEditor ? (
               <div className="flex flex-col gap-3">
-                {!isDailyNote ? <NoteTitle noteId={noteId ?? ""} onRename={renameTo} /> : null}
+                {!isDailyNote && !isWeeklyNote ? (
+                  <NoteTitle noteId={noteId ?? ""} onRename={renameTo} />
+                ) : null}
                 <BlockNoteEditor
                   key={noteId}
                   noteId={noteId}
@@ -746,86 +551,8 @@ function NotePage() {
                   highlightHeading={highlightHeading}
                 />
               </div>
-            ) : isReadOnlyDailyNote ? (
-              <DayActivity date={noteId ?? ""} />
             ) : (
-              <>
-                {mode === "read" && (
-                  <div className="min-h-[240px]">
-                    {parsedNote?.frontmatter?.gist_id ? (
-                      <div className="mb-5 print:hidden">
-                        <PillButton
-                          className="pl-1 coarse:pl-2"
-                          onClick={() => setIsShareDialogOpen(true)}
-                        >
-                          <GlobeIcon16 className="text-border-focus" />
-                          Published
-                        </PillButton>
-                      </div>
-                    ) : null}
-                    {
-                      // When printing a daily or weekly note without a title,
-                      // insert the date or week number as the title
-                      (isDailyNote || isWeeklyNote) && !note?.title ? (
-                        <h1 className="mb-4 hidden font-content text-xl font-bold leading-[1.4] print:block">
-                          {isDailyNote
-                            ? formatDate(noteId ?? "", { alwaysIncludeYear: true })
-                            : formatWeek(noteId ?? "")}
-                        </h1>
-                      ) : null
-                    }
-                    <Markdown
-                      noteId={noteId}
-                      onChange={setEditorValue}
-                      emptyText={
-                        <>
-                          Empty note (double <span className="coarse:hidden">click</span>
-                          <span className="hidden coarse:inline">tap</span> to edit)
-                        </>
-                      }
-                    >
-                      {editorValue}
-                    </Markdown>
-                  </div>
-                )}
-                <div
-                  hidden={mode !== "write"}
-                  className={cx(
-                    "min-h-[240px]",
-                    isDraggingFile &&
-                      "rounded-sm outline-dashed outline-2 outline-offset-8 outline-border",
-                  )}
-                  onDragOver={(event) => {
-                    // Show visual feedback when dragging files
-                    if (event.dataTransfer.types.includes("Files")) {
-                      event.preventDefault()
-                      event.dataTransfer.dropEffect = "copy"
-                      setIsDraggingFile(true)
-                    }
-                  }}
-                  onDragLeave={() => {
-                    setIsDraggingFile(false)
-                  }}
-                  onDrop={(event) => {
-                    // Handle dropped files
-                    if (event.dataTransfer.files.length > 0) {
-                      event.preventDefault()
-                      const file = event.dataTransfer.files[0]
-                      attachFile(file, editorRef.current?.view)
-                    }
-                    setIsDraggingFile(false)
-                  }}
-                >
-                  <NoteEditor
-                    ref={editorRef}
-                    defaultValue={editorValue}
-                    // eslint-disable-next-line jsx-a11y/no-autofocus
-                    autoFocus
-                    onChange={setEditorValue}
-                    minHeight={160}
-                  />
-                </div>
-              </>
+              <DayActivity date={noteId ?? ""} />
             )}
             {isWeeklyNote ? (
               <Details className="print:hidden">

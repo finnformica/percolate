@@ -297,7 +297,6 @@ export function NoteList({ baseQuery = "", query, onQueryChange }: NoteListProps
                       to="/notes/$"
                       params={{ _splat: note.id }}
                       search={{
-                        mode: "read",
                         query: undefined,
                       }}
                       className="focus-ring flex h-10 items-center rounded-lg px-3 hover:bg-bg-hover coarse:h-12 coarse:p-4"

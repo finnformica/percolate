@@ -6,7 +6,7 @@ import { githubRepoAtom, githubUserAtom } from "../global-state"
 import { getFileUrl, readFile } from "../utils/fs"
 import { REPO_DIR } from "../utils/git"
 
-export const fileCache = new Map<string, { file: File; url: string }>()
+const fileCache = new Map<string, { file: File; url: string }>()
 
 type FilePreviewProps = {
   path: string

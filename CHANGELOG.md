@@ -9,6 +9,11 @@
 ### Changed
 
 - Daily notes now use the same block/outline editor as the rest of your notes, and past days render their history as blocks too — one consistent editing and reading experience across the app.
+- The block editor is now the only editor in the app — weekly notes and inline property editing moved onto it too, so editing works the same everywhere.
+
+### Removed
+
+- Vim mode has been removed along with the old CodeMirror-based editor. (In-editor wikilink/date autocomplete, cursor-position template insertion, and drag-to-attach were part of that editor and are tracked to be rebuilt on the block editor.)
 
 ## 2026-W08
 

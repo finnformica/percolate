@@ -1,11 +1,11 @@
 # Block editor parity backlog
 
-The app is consolidating on the **block editor** as the single editor (replacing
-the classic CodeMirror editor, `note-editor.tsx`). Before removal, this logs the
-editing features CodeMirror provides that the block editor does **not yet** have,
-so they can be re-added intentionally rather than lost silently.
-
-Source of these features: `src/components/note-editor.tsx` + `src/codemirror-extensions/`.
+The app has consolidated on the **block editor** as its single editor; the
+classic CodeMirror editor (`note-editor.tsx`) and its extensions have been
+**removed**. This logs the editing features that lived only in CodeMirror so
+they can be re-added to the block editor intentionally rather than lost
+silently. Everything below is now an active backlog item (see git history of
+the removed `src/codemirror-extensions/` for the original implementations).
 
 ## Missing in the block editor (candidates to rebuild)
 

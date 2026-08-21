@@ -6,7 +6,7 @@ Ruminate is built on the foundation of [**Lumen**](https://github.com/lumen-note
 by Cole Bemis & contributors (MIT). It keeps Lumen's design system, editor, and
 GitHub sync, trimmed down and re-hosted on Cloudflare:
 
-- **Kept:** the full frontend (CodeMirror editor, calendar, command menu, tags,
+- **Kept:** the full frontend (block/outline editor, calendar, command menu, tags,
   templates, theming), GitHub OAuth login, and in-browser git sync via
   `isomorphic-git`. State stays in **Jotai** + **XState**; schemas in **Zod**.
 - **Removed:** the Supabase database and all AI features. Vercel is replaced by a
@@ -16,7 +16,7 @@ GitHub sync, trimmed down and re-hosted on Cloudflare:
 
 - React 18 + Vite + TypeScript
 - Tailwind CSS v4 + Radix / Base UI, `motion`
-- CodeMirror 6 (markdown source editor)
+- Custom block/outline editor (Logseq-style, `src/components/block-editor/`)
 - TanStack Router (file-based; `routeTree.gen.ts` is generated)
 - Jotai (+ jotai-xstate) and XState for the sync state machine
 - Zod for schema validation
