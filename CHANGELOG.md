@@ -21,6 +21,13 @@
 - Undo and redo now survive saving a note.
 - The app icon is now a monospace `#`.
 
+### Fixed
+
+- A highlighted block now reliably responds to the keyboard — arrow keys move the highlight instead of scrolling the page, whichever block you're on.
+- Copying a note or block produces clean markdown again (no stray `id::` lines or block metadata), through a single copy path everywhere.
+- Undo now re-highlights a block it brought back, so a delete + undo lands you back on it.
+- <kbd>⇧Enter</kbd> now splits into a new block of the same type (a heading stays a heading), and <kbd>⌘Enter</kbd> makes a new block below from anywhere — including a new root block from the note title.
+
 ### Removed
 
 - Vim mode has been removed along with the old CodeMirror-based editor. (In-editor wikilink/date autocomplete, cursor-position template insertion, and drag-to-attach were part of that editor and are tracked to be rebuilt on the block editor.)

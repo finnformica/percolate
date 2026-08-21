@@ -21,6 +21,7 @@ declaratively in `src/blocks/keymap.ts` and dispatched through the command layer
 | Action                                  | Shortcut                                              |
 | --------------------------------------- | ----------------------------------------------------- |
 | Edit the block                          | <kbd>↵</kbd>                                          |
+| New block below (and edit it)           | <kbd>⌘</kbd> <kbd>↵</kbd> / <kbd>⇧</kbd> <kbd>↵</kbd> |
 | Move highlight up / down                | <kbd>↑</kbd> / <kbd>↓</kbd>                           |
 | Jump across siblings (same level)       | <kbd>⌥</kbd> <kbd>↑</kbd> / <kbd>↓</kbd>              |
 | Jump to top / bottom of the level       | <kbd>⌘</kbd> <kbd>↑</kbd> / <kbd>↓</kbd>              |
@@ -38,29 +39,31 @@ copy / cut act on the whole selection; <kbd>Esc</kbd> collapses back to one.
 
 ### Edit mode (typing in a block)
 
-| Action                                       | Shortcut                                                 |
-| -------------------------------------------- | -------------------------------------------------------- |
-| Stop editing (back to highlight)             | <kbd>Esc</kbd>                                           |
-| New block below (bullet by default)          | <kbd>↵</kbd>                                             |
-| Plain line break (split at caret, no marker) | <kbd>⇧</kbd> <kbd>↵</kbd>                                |
-| Indent / outdent                             | <kbd>⇥</kbd> / <kbd>⇧</kbd> <kbd>⇥</kbd>                 |
-| Move block (with its subtree)                | <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>↑</kbd> / <kbd>↓</kbd>    |
-| Jump across siblings / levels                | <kbd>⌥</kbd> or <kbd>⌘</kbd> <kbd>↑</kbd> / <kbd>↓</kbd> |
-| Move to block above / below (at line edge)   | <kbd>↑</kbd> / <kbd>↓</kbd>                              |
-| Strip the block's marker → merge up          | <kbd>⌫</kbd> at line start                               |
+| Action                                     | Shortcut                                                 |
+| ------------------------------------------ | -------------------------------------------------------- |
+| Stop editing (back to highlight)           | <kbd>Esc</kbd>                                           |
+| New block below (bullet by default)        | <kbd>↵</kbd>                                             |
+| Split into a new block of the same type    | <kbd>⇧</kbd> <kbd>↵</kbd>                                |
+| New block below, ignoring the caret        | <kbd>⌘</kbd> <kbd>↵</kbd>                                |
+| Indent / outdent                           | <kbd>⇥</kbd> / <kbd>⇧</kbd> <kbd>⇥</kbd>                 |
+| Move block (with its subtree)              | <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>↑</kbd> / <kbd>↓</kbd>    |
+| Jump across siblings / levels              | <kbd>⌥</kbd> or <kbd>⌘</kbd> <kbd>↑</kbd> / <kbd>↓</kbd> |
+| Move to block above / below (at line edge) | <kbd>↑</kbd> / <kbd>↓</kbd>                              |
+| Strip the block's marker → merge up        | <kbd>⌫</kbd> at line start                               |
 
 Enter from a heading nests the new block underneath it. Enter on an empty list
 item exits the list.
 
 ### Note title
 
-| Action                    | Shortcut                          |
-| ------------------------- | --------------------------------- |
-| Select the title          | <kbd>↑</kbd> from the first block |
-| Edit it                   | <kbd>↵</kbd> (or click)           |
-| Drop back into the editor | <kbd>↓</kbd>                      |
-| Commit rename             | <kbd>↵</kbd>                      |
-| Cancel rename             | <kbd>Esc</kbd>                    |
+| Action                    | Shortcut                                              |
+| ------------------------- | ----------------------------------------------------- |
+| Select the title          | <kbd>↑</kbd> from the first block                     |
+| Edit it                   | <kbd>↵</kbd> (or click)                               |
+| New root block below      | <kbd>⌘</kbd> <kbd>↵</kbd> / <kbd>⇧</kbd> <kbd>↵</kbd> |
+| Drop back into the editor | <kbd>↓</kbd>                                          |
+| Commit rename             | <kbd>↵</kbd>                                          |
+| Cancel rename             | <kbd>Esc</kbd>                                        |
 
 ### Document
 
