@@ -5,11 +5,17 @@
 ### New
 
 - Past days in the calendar now show what you actually wrote that day, reconstructed from your Git history. It's a read-only view that merges every note you touched, with that day's note first — while today stays fully editable as before. Commit times are shown in your current timezone, and daily notes stay pinned to their date wherever in the world you open them.
+- Hovering a note in the sidebar now reveals a three-dots actions menu — pin, copy, rename, open in GitHub, or delete any note without opening it first.
+- Move a block and everything nested under it with <kbd>⌥⇧↑</kbd> / <kbd>⌥⇧↓</kbd>. The note title is now reachable from the keyboard too: press <kbd>↑</kbd> from the first block to jump up and edit it, <kbd>↓</kbd> to drop back into the note.
 
 ### Changed
 
 - Daily notes now use the same block/outline editor as the rest of your notes, and past days render their history as blocks too — one consistent editing and reading experience across the app.
 - The block editor is now the only editor in the app — weekly notes and inline property editing moved onto it too, so editing works the same everywhere.
+- Headings are now sized by how deeply they're nested in the outline (down to a bold, underlined body-size floor) rather than by how many `#`s you type, and get a little breathing room above them.
+- The editor feels more like an outliner: <kbd>Enter</kbd> starts a bullet by default (and nests under a heading), <kbd>⇧Enter</kbd> is a plain line break, <kbd>Space</kbd> never scrolls the page, <kbd>Tab</kbd>/<kbd>⇧Tab</kbd> and <kbd>⌫</kbd> work on a highlighted block without entering it, and there's always a blank block waiting at the bottom.
+- Undo and redo now survive saving a note.
+- The app icon is now a monospace `#`.
 
 ### Removed
 
