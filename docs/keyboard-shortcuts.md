@@ -2,12 +2,12 @@
 
 ## Global
 
-| Action            | Shortcut                              |
-| ----------------- | ------------------------------------- |
-| Command menu      | <kbd>⌘</kbd> <kbd>K</kbd>             |
+| Action            | Shortcut                               |
+| ----------------- | -------------------------------------- |
+| Command menu      | <kbd>⌘</kbd> <kbd>K</kbd>              |
 | New note          | <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>O</kbd> |
-| Save              | <kbd>⌘</kbd> <kbd>S</kbd>             |
-| Toggle help panel | <kbd>⌘</kbd> <kbd>/</kbd>             |
+| Save              | <kbd>⌘</kbd> <kbd>S</kbd>              |
+| Toggle help panel | <kbd>⌘</kbd> <kbd>/</kbd>              |
 
 ## Block editor
 
@@ -18,43 +18,43 @@ declaratively in `src/blocks/keymap.ts` and dispatched through the command layer
 
 ### Select mode (a block is highlighted)
 
-| Action                          | Shortcut                              |
-| ------------------------------- | ------------------------------------- |
-| Edit the block                  | <kbd>↵</kbd>                          |
-| Move highlight up / down        | <kbd>↑</kbd> / <kbd>↓</kbd>           |
-| Indent / outdent                | <kbd>⇥</kbd> / <kbd>⇧</kbd> <kbd>⇥</kbd> |
-| Move block (with its subtree)   | <kbd>⌥</kbd> <kbd>⇧</kbd> <kbd>↑</kbd> / <kbd>↓</kbd> |
-| Delete block                    | <kbd>⌫</kbd> / <kbd>⌦</kbd>           |
-| Collapse / expand (if nested)   | <kbd>Space</kbd>                      |
-| Toggle checkbox (todo blocks)   | <kbd>x</kbd>                          |
+| Action                        | Shortcut                                              |
+| ----------------------------- | ----------------------------------------------------- |
+| Edit the block                | <kbd>↵</kbd>                                          |
+| Move highlight up / down      | <kbd>↑</kbd> / <kbd>↓</kbd>                           |
+| Indent / outdent              | <kbd>⇥</kbd> / <kbd>⇧</kbd> <kbd>⇥</kbd>              |
+| Move block (with its subtree) | <kbd>⌥</kbd> <kbd>⇧</kbd> <kbd>↑</kbd> / <kbd>↓</kbd> |
+| Delete block                  | <kbd>⌫</kbd> / <kbd>⌦</kbd>                           |
+| Collapse / expand (if nested) | <kbd>Space</kbd>                                      |
+| Toggle checkbox (todo blocks) | <kbd>x</kbd>                                          |
 
 ### Edit mode (typing in a block)
 
-| Action                                        | Shortcut                              |
-| --------------------------------------------- | ------------------------------------- |
-| Stop editing (back to highlight)              | <kbd>Esc</kbd>                        |
-| New block below (bullet by default)           | <kbd>↵</kbd>                          |
-| Plain line break (split at caret, no marker)  | <kbd>⇧</kbd> <kbd>↵</kbd>             |
-| Indent / outdent                              | <kbd>⇥</kbd> / <kbd>⇧</kbd> <kbd>⇥</kbd> |
-| Move block (with its subtree)                 | <kbd>⌥</kbd> <kbd>⇧</kbd> <kbd>↑</kbd> / <kbd>↓</kbd> |
-| Move to block above / below (at line edge)    | <kbd>↑</kbd> / <kbd>↓</kbd>           |
-| Strip the block's marker → merge up           | <kbd>⌫</kbd> at line start           |
-| Focus the note title                          | <kbd>↑</kbd> from the first block     |
+| Action                                       | Shortcut                                              |
+| -------------------------------------------- | ----------------------------------------------------- |
+| Stop editing (back to highlight)             | <kbd>Esc</kbd>                                        |
+| New block below (bullet by default)          | <kbd>↵</kbd>                                          |
+| Plain line break (split at caret, no marker) | <kbd>⇧</kbd> <kbd>↵</kbd>                             |
+| Indent / outdent                             | <kbd>⇥</kbd> / <kbd>⇧</kbd> <kbd>⇥</kbd>              |
+| Move block (with its subtree)                | <kbd>⌥</kbd> <kbd>⇧</kbd> <kbd>↑</kbd> / <kbd>↓</kbd> |
+| Move to block above / below (at line edge)   | <kbd>↑</kbd> / <kbd>↓</kbd>                           |
+| Strip the block's marker → merge up          | <kbd>⌫</kbd> at line start                            |
+| Focus the note title                         | <kbd>↑</kbd> from the first block                     |
 
 Enter from a heading nests the new block underneath it. Enter on an empty list
 item exits the list.
 
 ### Note title
 
-| Action                     | Shortcut     |
-| -------------------------- | ------------ |
-| Drop back into the editor  | <kbd>↓</kbd> |
-| Commit rename              | <kbd>↵</kbd> |
-| Cancel rename              | <kbd>Esc</kbd> |
+| Action                    | Shortcut       |
+| ------------------------- | -------------- |
+| Drop back into the editor | <kbd>↓</kbd>   |
+| Commit rename             | <kbd>↵</kbd>   |
+| Cancel rename             | <kbd>Esc</kbd> |
 
 ### Document
 
-| Action | Shortcut                                                            |
+| Action | Shortcut                                                           |
 | ------ | ------------------------------------------------------------------ |
 | Undo   | <kbd>⌘</kbd> <kbd>Z</kbd>                                          |
 | Redo   | <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>Z</kbd> / <kbd>⌘</kbd> <kbd>Y</kbd> |

@@ -13,18 +13,18 @@ input method reuses it:
    `insertAfter`, `updateContent`, … No UI, no selection, no React. Trivially
    testable.
 
-2. **Commands — `src/blocks/commands.ts`.** Named, input-agnostic *intents*
+2. **Commands — `src/blocks/commands.ts`.** Named, input-agnostic _intents_
    ("indent this block", "split at the caret", "delete this block", "move the
    highlight up"). A command is a pure function
    `(CommandInput) => CommandResult`: it reads the doc plus a little UI context
-   (the target block, the on-screen order, the caret) and returns *what should
-   change* — a new doc + history op, where focus should land, whether a block's
+   (the target block, the on-screen order, the caret) and returns _what should
+   change_ — a new doc + history op, where focus should land, whether a block's
    collapse toggles, whether navigation ran off the top. It never touches React
    or the DOM. The editor component applies the result.
 
 3. **Bindings — `src/blocks/keymap.ts`.** A declarative table mapping a mode +
    key combo (and, where it matters, a caret predicate) to a command name. This
-   table *is* the spec of the editor's keyboard behaviour: greppable in one
+   table _is_ the spec of the editor's keyboard behaviour: greppable in one
    place and unit-tested (`keymap.test.ts` also checks every bound command
    exists).
 
@@ -116,7 +116,7 @@ avoid collisions.
 Open questions / why deferred (a genuine data-model fork, needs a decision):
 
 - **Does the slug replace the filename/id, or sit beside it?** Today the note id
-  *is* the filename *is* the URL, and wikilinks (`[[id]]`) resolve by that id.
+  _is_ the filename _is_ the URL, and wikilinks (`[[id]]`) resolve by that id.
   Slugging the filename means renaming files as titles change (and rewriting
   wikilinks — the rename flow already does this) and re-slugging on collisions.
 - **Alternatively**, keep the stable id as the filename and add a slug purely for
