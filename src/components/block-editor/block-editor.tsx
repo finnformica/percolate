@@ -50,23 +50,6 @@ function findHeadingBlockId(doc: BlockDoc, heading: string): string | null {
   return found
 }
 
-/** The nearest ancestor that actually scrolls vertically (the note's <main>),
- * or null if none — in which case the window is the scroller. */
-function scrollParentOf(el: HTMLElement): HTMLElement | null {
-  let node = el.parentElement
-  while (node) {
-    const overflowY = getComputedStyle(node).overflowY
-    if (
-      (overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay") &&
-      node.scrollHeight > node.clientHeight
-    ) {
-      return node
-    }
-    node = node.parentElement
-  }
-  return null
-}
-
 /** The first block (in document order) present in `restored` but not in
  * `current` — the block an undo brought back, e.g. after a delete. */
 function findReappeared(current: BlockDoc, restored: BlockDoc): string | null {
@@ -516,40 +499,20 @@ export function BlockEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, focus, anchorId, doc, readOnly])
 
-  // Keep the highlighted block in a comfortable middle band as it moves, since
-  // focusing the container itself no longer scrolls it into view. We scroll the
-  // block's own scroll container (the note's <main>), not the window, and move
-  // only the minimum needed to bring the row just inside the band — so stepping
-  // through blocks glides instead of yanking to centre on every crossing (which
-  // was especially jarring on tall, margin-topped headings).
+  // Keep the highlighted block centred as it moves, since focusing the
+  // container itself no longer scrolls it into view. Let the browser do the
+  // work with a native `scrollIntoView({ block: "center" })` — no manual
+  // measuring to misfire and jump, and it correctly walks nested scroll
+  // containers. We centre the inner content *line* (`data-block-line`), not the
+  // row wrapper: the wrapper carries a heading's top margin, which would
+  // otherwise distort where the highlight lands and make headings jump. When
+  // the note fits on screen there's nothing to scroll, so this is a no-op.
   useLayoutEffect(() => {
     if (readOnly || focus || !selected) return
-    const el = containerRef.current?.querySelector<HTMLElement>(`[data-block-row="${selected}"]`)
-    if (!el || typeof el.getBoundingClientRect !== "function") return
-
-    const scroller = scrollParentOf(el)
-    const view = scroller
-      ? scroller.getBoundingClientRect()
-      : { top: 0, height: window.innerHeight || document.documentElement.clientHeight }
-    const rect = el.getBoundingClientRect()
-    const top = rect.top - view.top
-    const bottom = rect.bottom - view.top
-    // The band is the middle half: keep the row between 25% and 75% of the view.
-    const pad = view.height * 0.25
-    let delta = 0
-    if (top < pad) delta = top - pad
-    else if (bottom > view.height - pad) delta = bottom - (view.height - pad)
-    if (delta === 0) return
-
-    if (scroller && typeof scroller.scrollBy === "function") {
-      scroller.scrollBy({ top: delta })
-    } else if (
-      !scroller &&
-      typeof window.scrollBy === "function" &&
-      document.documentElement.scrollHeight > window.innerHeight
-    ) {
-      window.scrollBy({ top: delta })
-    }
+    const row = containerRef.current?.querySelector<HTMLElement>(`[data-block-row="${selected}"]`)
+    const line = row?.querySelector<HTMLElement>("[data-block-line]") ?? row
+    if (!line || typeof line.scrollIntoView !== "function") return
+    line.scrollIntoView({ block: "center" })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, focus, readOnly])
 

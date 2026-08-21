@@ -260,6 +260,10 @@ export function BlockItem({
 
         <div className="min-w-0 flex-1 py-0.5 font-content leading-relaxed">
           <div
+            // The visible content line (carries the highlight). Scroll-into-view
+            // targets this, not the row wrapper, so a heading's top margin can't
+            // distort where the highlight lands.
+            data-block-line
             className={cx(
               "flex items-start gap-2 rounded-sm px-1",
               selected && "bg-bg-secondary",
