@@ -1,4 +1,3 @@
-import * as RadixSwitch from "@radix-ui/react-switch"
 import { Vim } from "@replit/codemirror-vim"
 import { createFileRoute } from "@tanstack/react-router"
 import { ReactCodeMirrorRef } from "@uiw/react-codemirror"
@@ -19,6 +18,7 @@ import { DraftIndicator } from "../components/draft-indicator"
 import { DropdownMenu } from "../components/dropdown-menu"
 import { IconButton } from "../components/icon-button"
 import {
+  CheckIcon16,
   CopyIcon16,
   EditIcon16,
   ExternalLinkIcon16,
@@ -676,37 +676,19 @@ function NotePage() {
         </div>
       }
       floatingActions={
-        <div className="card-2 flex gap-1.5 coarse:gap-2 rounded-full! p-1.5 coarse:p-2 sm:hidden print:hidden">
-          {useBlockEditor || (!note && editorValue) || isDraft ? (
-            <Button
+        useBlockEditor || (!note && editorValue) || isDraft ? (
+          <div className="card-2 flex gap-1.5 coarse:gap-2 rounded-full! p-1.5 coarse:p-2 sm:hidden print:hidden">
+            <IconButton
+              aria-label={isSaving ? "Saving…" : "Save"}
               disabled={isSignedOut || isSaving || !isDraft}
-              variant="primary"
               shortcut={isSaving ? undefined : ["⌘", "S"]}
               onClick={requestSave}
-              className="coarse:h-12 items-center gap-1.5 rounded-full coarse:px-6"
+              className="size-8 coarse:size-12 rounded-full bg-text text-bg [&_*]:text-bg enabled:hover:bg-text enabled:active:bg-text"
             >
-              {isSaving ? <LoadingIcon16 className="animate-spin" /> : null}
-              {isSaving ? "Saving…" : "Save"}
-            </Button>
-          ) : null}
-          <RadixSwitch.Root
-            checked={mode === "write"}
-            onCheckedChange={(checked) => {
-              if (checked) {
-                switchToWriting()
-              } else {
-                switchToReading()
-              }
-            }}
-            className={cx(
-              "relative h-8 coarse:h-12 w-[48px] coarse:w-[72px] cursor-pointer rounded-full bg-bg-secondary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-border-focus data-[state=checked]:bg-border-focus data-[state=unchecked]:ring-1 data-[state=unchecked]:ring-inset data-[state=unchecked]:ring-border-secondary data-[state=unchecked]:hover:bg-bg-secondary-hover",
-            )}
-          >
-            <RadixSwitch.Thumb className="pointer-events-none grid size-8 coarse:size-12 translate-x-0 place-items-center rounded-full border border-border bg-bg-overlay text-text-secondary transition-transform will-change-transform data-[state=checked]:translate-x-[16px] coarse:data-[state=checked]:translate-x-[24px] data-[state=checked]:border-border-focus">
-              <EditIcon16 />
-            </RadixSwitch.Thumb>
-          </RadixSwitch.Root>
-        </div>
+              {isSaving ? <LoadingIcon16 className="animate-spin" /> : <CheckIcon16 />}
+            </IconButton>
+          </div>
+        ) : null
       }
     >
       <InsertTemplateDialog />
