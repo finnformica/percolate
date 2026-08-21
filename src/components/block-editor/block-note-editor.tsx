@@ -3,6 +3,7 @@ import { parse } from "../../blocks/parse"
 import { serialize } from "../../blocks/serialize"
 import { emptyBlock } from "../../blocks/ops"
 import type { BlockDoc } from "../../blocks/types"
+import { useCollapseState } from "../../data/view-state"
 import { BlockEditor } from "./block-editor"
 
 /** Ensure a parsed doc always has at least one block to edit. */
@@ -21,12 +22,19 @@ function withStarterBlock(doc: BlockDoc): BlockDoc {
 export function BlockNoteEditor({
   value,
   onChange,
+  noteId,
   historyResetToken,
   startEditing,
   highlightHeading,
 }: {
   value: string
   onChange: (value: string) => void
+  /**
+   * The note's id. When provided, collapse state is persisted across reloads
+   * and devices via the view-state sidecar; without it, collapse is transient
+   * local state (e.g. Storybook / standalone usage).
+   */
+  noteId?: string
   /** Changes on save; collapses the block editor's local undo history. */
   historyResetToken?: unknown
   /** Start with the first block in edit mode (e.g. a brand-new note). */
@@ -35,6 +43,7 @@ export function BlockNoteEditor({
   highlightHeading?: string
 }) {
   const [doc, setDoc] = useState<BlockDoc>(() => withStarterBlock(parse(value)))
+  const { collapsed, toggleCollapse } = useCollapseState(noteId)
 
   const handleChange = (next: BlockDoc) => {
     setDoc(next)
@@ -48,6 +57,8 @@ export function BlockNoteEditor({
       historyResetToken={historyResetToken}
       startEditing={startEditing}
       highlightHeading={highlightHeading}
+      collapsed={noteId ? collapsed : undefined}
+      onToggleCollapse={noteId ? toggleCollapse : undefined}
     />
   )
 }

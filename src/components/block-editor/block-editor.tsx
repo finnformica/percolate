@@ -59,6 +59,8 @@ export function BlockEditor({
   historyResetToken,
   startEditing = false,
   highlightHeading,
+  collapsed: collapsedProp,
+  onToggleCollapse,
 }: {
   doc: BlockDoc
   onChange: (doc: BlockDoc) => void
@@ -68,6 +70,13 @@ export function BlockEditor({
   startEditing?: boolean
   /** Highlight the block for this heading text on mount / when it changes. */
   highlightHeading?: string
+  /**
+   * Collapsed block ids. Optional: when provided (with `onToggleCollapse`),
+   * collapse is controlled and persisted by the caller; otherwise it falls back
+   * to transient local state (e.g. Storybook / standalone usage).
+   */
+  collapsed?: Set<string>
+  onToggleCollapse?: (id: string) => void
 }) {
   const firstBlockId = doc.rootBlockIds[0] ?? null
   const [focus, setFocus] = useState<FocusRequest | null>(() =>
@@ -76,7 +85,8 @@ export function BlockEditor({
   const [selected, setSelected] = useState<string | null>(() =>
     highlightHeading ? (findHeadingBlockId(doc, highlightHeading) ?? firstBlockId) : firstBlockId,
   )
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const [collapsedInternal, setCollapsedInternal] = useState<Set<string>>(new Set())
+  const collapsed = collapsedProp ?? collapsedInternal
   const history = useBlockHistory(onChange, historyResetToken)
 
   // Re-highlight when the target heading changes (Cmd-K into the open note).
@@ -150,13 +160,18 @@ export function BlockEditor({
       const next = direction === "up" ? i - 1 : i + 1
       if (next >= 0 && next < visibleOrder.length) setSelected(visibleOrder[next])
     },
-    toggleCollapse: (id) =>
-      setCollapsed((prev) => {
+    toggleCollapse: (id) => {
+      if (onToggleCollapse) {
+        onToggleCollapse(id)
+        return
+      }
+      setCollapsedInternal((prev) => {
         const next = new Set(prev)
         if (next.has(id)) next.delete(id)
         else next.add(id)
         return next
-      }),
+      })
+    },
     setFocus,
     onContentChange: (id, content) =>
       history.commit(doc, updateContent(doc, id, content), { type: "text", blockId: id }),

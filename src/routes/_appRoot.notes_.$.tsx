@@ -723,6 +723,7 @@ function NotePage() {
                 <NoteTitle noteId={noteId ?? ""} onRename={renameTo} />
                 <BlockNoteEditor
                   key={noteId}
+                  noteId={noteId}
                   value={editorValue}
                   onChange={setEditorValue}
                   historyResetToken={saveEpoch}

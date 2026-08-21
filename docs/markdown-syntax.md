@@ -1,6 +1,6 @@
 # Markdown syntax
 
-Lumen supports [GitHub Flavored Markdown](https://github.github.com/gfm/) with the following syntax extensions:
+Ruminate supports [GitHub Flavored Markdown](https://github.github.com/gfm/) with the following syntax extensions:
 
 ## Wikilinks
 
@@ -27,7 +27,7 @@ You can also use wikilink syntax to reference a date.
 | `[[2021-07-11]]` | `<a href="/2021-07-11">Sun, Jul 11, 2021</a>` |
 
 > [!TIP]
-> Lumen uses [Chrono](https://github.com/wanasit/chrono) to convert natural language dates into ISO format (YYYY-MM-DD). Try typing `[[yesterday]]` or `[[next monday]]` in a note editor to see it in action.
+> Ruminate uses [Chrono](https://github.com/wanasit/chrono) to convert natural language dates into ISO format (YYYY-MM-DD). Try typing `[[yesterday]]` or `[[next monday]]` in a note editor to see it in action.
 
 ## Embeds
 

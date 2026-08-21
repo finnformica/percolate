@@ -78,8 +78,17 @@ export function parse(markdown: string): BlockDoc {
   }
 
   const blocks: Record<string, Block> = {}
+  // Ids already assigned in this document. A duplicate `id::` — e.g. from
+  // copy-pasting a block, id line and all, in an external editor — would
+  // otherwise overwrite the earlier block in `blocks` and make its parent
+  // reference the same id twice, silently losing a block. Regenerate on
+  // collision so every block keeps a distinct id; the fresh id persists on the
+  // next save. (Also covers the rare case of a freshly minted id colliding.)
+  const usedIds = new Set<string>()
   const flatten = (node: ParsedNode): string => {
-    const id = node.fileId ?? blockId()
+    let id = node.fileId ?? blockId()
+    while (usedIds.has(id)) id = blockId()
+    usedIds.add(id)
     const block: Block = { id, content: node.content, children: [] }
     blocks[id] = block
     block.children = node.children.map(flatten)
