@@ -12,6 +12,9 @@ import {
 import type { CaretInput, Mode } from "../../blocks/commands"
 import type { KeyLike } from "../../blocks/keymap"
 import { IconButton } from "../icon-button"
+import { CompletionMenu } from "./autocomplete/completion-menu"
+import type { CompletionApply } from "./autocomplete/types"
+import { useAutocomplete } from "./autocomplete/use-autocomplete"
 import { BlockContent } from "./block-content"
 import { caretLineFlags } from "./caret"
 
@@ -112,6 +115,7 @@ export function BlockItem({
   const isCollapsed = api.collapsed.has(block.id)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const pendingCaret = useRef<number | null>(null)
+  const autocomplete = useAutocomplete(textareaRef)
 
   const type = getBlockType(block.content)
   // The block is edited and rendered *without* its marker (the `- `, `# `,
@@ -169,9 +173,28 @@ export function BlockItem({
       pendingCaret.current = Math.max(0, caret - (newBody.length - derivedBody.length))
     }
     api.onContentChange(block.id, newContent)
+    autocomplete.recompute()
+  }
+
+  // Apply an accepted completion: splice its edit into the block's text and
+  // place the caret after it (via the pendingCaret restore effect).
+  const applyCompletion = (apply: CompletionApply) => {
+    const value = textareaRef.current?.value ?? body
+    const nextBody = value.slice(0, apply.from) + apply.insert + value.slice(apply.to)
+    pendingCaret.current = apply.caret
+    api.onContentChange(block.id, prefix + nextBody)
   }
 
   const handleEditKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    // The autocomplete menu gets first refusal on keys (navigate / accept /
+    // dismiss) before the block editor's own bindings.
+    const completion = autocomplete.handleKeyDown(event)
+    if (completion) {
+      event.preventDefault()
+      if (completion !== "handled") applyCompletion(completion)
+      return
+    }
+
     const el = event.currentTarget
     // Line geometry is only needed to decide whether an arrow leaves the block,
     // and measuring it mirrors the textarea into the DOM — so skip it for every
@@ -272,20 +295,38 @@ export function BlockItem({
           >
             {marker}
             {editing ? (
-              <textarea
-                ref={textareaRef}
-                value={body}
-                rows={1}
-                spellCheck
-                onChange={handleTextareaChange}
-                onKeyDown={handleEditKeyDown}
-                onPaste={handlePaste}
-                onBlur={() => api.setFocus(null)}
-                className={cx(
-                  "min-w-0 flex-1 resize-none border-none bg-transparent p-0 font-content leading-relaxed text-text outline-none",
-                  typo,
-                )}
-              />
+              <div className="relative min-w-0 flex-1">
+                <textarea
+                  ref={textareaRef}
+                  value={body}
+                  rows={1}
+                  spellCheck
+                  onChange={handleTextareaChange}
+                  onKeyDown={handleEditKeyDown}
+                  onKeyUp={() => autocomplete.recompute()}
+                  onClick={() => autocomplete.recompute()}
+                  onPaste={handlePaste}
+                  onBlur={() => {
+                    autocomplete.close()
+                    api.setFocus(null)
+                  }}
+                  className={cx(
+                    "w-full resize-none border-none bg-transparent p-0 font-content leading-relaxed text-text outline-none",
+                    typo,
+                  )}
+                />
+                {autocomplete.active && autocomplete.position ? (
+                  <CompletionMenu
+                    active={autocomplete.active}
+                    index={autocomplete.index}
+                    position={autocomplete.position}
+                    onSelect={(i) => {
+                      const apply = autocomplete.accept(i)
+                      if (apply) applyCompletion(apply)
+                    }}
+                  />
+                ) : null}
+              </div>
             ) : (
               // Keyboard for select mode is handled by the editor container (it
               // holds focus); this element only needs the pointer interactions.

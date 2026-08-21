@@ -9,16 +9,16 @@ the removed `src/codemirror-extensions/` for the original implementations).
 
 ## Missing in the block editor (candidates to rebuild)
 
-- **Autocomplete as you type** (`@codemirror/autocomplete` + `wikilink` extension,
-  `tagsAtom`, `templatesAtom`, `useStableSearchNotes`):
-  - `[[` → wikilink suggestions from existing notes
-  - `#` → tag suggestions
-  - template insertion by name
-  - This is the biggest gap — fast linking is core to note-taking.
-- **In-editor natural-language dates** (`chrono-node`): resolving shorthand like
-  "next monday" into a date while typing. (`chrono-node` stays in the repo — it's
-  also used by the command menu, note picker, and search — but the _in-editor_
-  parsing is CodeMirror-only.)
+- **Autocomplete as you type** — foundation now rebuilt natively in
+  `src/components/block-editor/autocomplete/` (a `CompletionSource` layer +
+  engine + menu, mirroring the command/keymap split). Remaining sources to add
+  to `sources.ts`:
+  - `[[` → wikilink suggestions from existing notes (a `noteCompletionSource`)
+  - `#` → tag suggestions (a `tagCompletionSource`)
+  - template insertion by name (a `templateCompletionSource`)
+- **In-editor natural-language dates** (`chrono-node`): **done** — the
+  `dateCompletionSource` offers `[[next monday` → `[[YYYY-MM-DD]]` in the block
+  editor, ported from the classic editor's `dateCompletion`.
 - **Template insertion at the cursor** (`insert-template.tsx` dispatches into a
   CodeMirror `EditorView`): the block editor has no `EditorView`, so mid-document
   template insertion needs a block-aware equivalent. (Daily/weekly templates that

@@ -33,8 +33,13 @@ const MIRROR_PROPS = [
   "overflowWrap",
 ] as const
 
-/** The top offset (px) of the caret line for `position` within `textarea`. */
-function caretTop(textarea: HTMLTextAreaElement, position: number): number {
+/** The caret's box (px, relative to the textarea's content box) for `position`,
+ * measured via the same hidden mirror. Used both for line detection and to
+ * anchor the autocomplete menu at the caret. */
+export function caretCoords(
+  textarea: HTMLTextAreaElement,
+  position: number,
+): { top: number; left: number; height: number } {
   const doc = textarea.ownerDocument
   const div = doc.createElement("div")
   const computed = getComputedStyle(textarea)
@@ -56,8 +61,15 @@ function caretTop(textarea: HTMLTextAreaElement, position: number): number {
 
   doc.body.appendChild(div)
   const top = marker.offsetTop
+  const left = marker.offsetLeft
+  const height = marker.offsetHeight
   doc.body.removeChild(div)
-  return top
+  return { top, left, height }
+}
+
+/** The top offset (px) of the caret line for `position` within `textarea`. */
+function caretTop(textarea: HTMLTextAreaElement, position: number): number {
+  return caretCoords(textarea, position).top
 }
 
 /**
