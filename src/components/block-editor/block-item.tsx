@@ -24,15 +24,27 @@ export interface FocusRequest {
 
 export interface BlockEditorApi {
   focus: FocusRequest | null
-  /** The highlighted block in select mode (null while editing or unfocused). */
+  /** The head of the selection in select mode (null while editing/unfocused). */
   selected: string | null
+  /** All highlighted block ids (a Shift+Arrow range, or just the head). */
+  selectedSet: Set<string>
+  /** How many blocks are selected (1 = single). */
+  selectionCount: number
   collapsed: Set<string>
   /** Display-only: no editing, selection, or mutation (collapse still works). */
   readOnly?: boolean
-  /** Highlight a block (leaves edit mode). */
+  /** Highlight a block (leaves edit mode, collapses any multi-selection). */
   select: (id: string) => void
   /** Enter edit mode for a block. */
   edit: (id: string, atStart?: boolean) => void
+  /** Extend the multi-block selection by one along the visible order. */
+  extendSelection: (direction: "up" | "down") => void
+  /** Act on the whole current selection. */
+  indentSelection: () => void
+  outdentSelection: () => void
+  removeSelection: () => void
+  copySelection: () => void
+  cutSelection: () => void
   toggleCollapse: (id: string) => void
   setFocus: (focus: FocusRequest | null) => void
   onContentChange: (id: string, content: string) => void
@@ -105,7 +117,7 @@ export function BlockItem({
 }) {
   const readOnly = api.readOnly ?? false
   const editing = !readOnly && api.focus?.id === block.id
-  const selected = api.selected === block.id && !editing
+  const selected = api.selectedSet.has(block.id) && !editing
   const hasChildren = block.children.length > 0
   const isCollapsed = api.collapsed.has(block.id)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -206,6 +218,42 @@ export function BlockItem({
   }
 
   const handleSelectKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    // Shift+Arrow grows/shrinks a multi-block selection.
+    if (event.shiftKey && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+      event.preventDefault()
+      api.extendSelection(event.key === "ArrowUp" ? "up" : "down")
+      return
+    }
+    // Actions that operate on the whole selection when more than one is picked.
+    if (api.selectionCount > 1) {
+      const mod = event.metaKey || event.ctrlKey
+      if (event.key === "Tab") {
+        event.preventDefault()
+        if (event.shiftKey) api.outdentSelection()
+        else api.indentSelection()
+        return
+      }
+      if (event.key === "Backspace" || event.key === "Delete") {
+        event.preventDefault()
+        api.removeSelection()
+        return
+      }
+      if (mod && event.key.toLowerCase() === "c") {
+        event.preventDefault()
+        api.copySelection()
+        return
+      }
+      if (mod && event.key.toLowerCase() === "x") {
+        event.preventDefault()
+        api.cutSelection()
+        return
+      }
+      if (event.key === "Escape") {
+        event.preventDefault()
+        api.select(block.id)
+        return
+      }
+    }
     if (api.dispatchKey("select", block.id, event)) event.preventDefault()
   }
 

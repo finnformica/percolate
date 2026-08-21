@@ -12,7 +12,14 @@ import {
 } from "../../blocks/commands"
 import { resolveKey, type KeyLike } from "../../blocks/keymap"
 import { parse } from "../../blocks/parse"
-import { spliceBlocks, updateContent } from "../../blocks/ops"
+import {
+  indentBlock,
+  outdentBlock,
+  removeBlock,
+  siblingsOf,
+  spliceBlocks,
+  updateContent,
+} from "../../blocks/ops"
 import { BlockItem, type BlockEditorApi, type FocusRequest } from "./block-item"
 import { useBlockHistory } from "./use-block-history"
 
@@ -94,6 +101,8 @@ export function BlockEditor({
   )
   const [collapsedInternal, setCollapsedInternal] = useState<Set<string>>(new Set())
   const collapsed = collapsedProp ?? collapsedInternal
+  // The other end of a multi-block selection (Shift+Arrow). null = single select.
+  const [anchorId, setAnchorId] = useState<string | null>(null)
   const history = useBlockHistory(onChange)
 
   // Re-highlight when the target heading changes (Cmd-K into the open note).
@@ -125,24 +134,120 @@ export function BlockEditor({
     return order
   }, [doc, collapsed])
 
+  // The selected block ids. Single select is just `[selected]`; a Shift+Arrow
+  // range is the contiguous span of `visibleOrder` between anchor and head.
+  const selectedIds: string[] = useMemo(() => {
+    if (!selected) return []
+    if (!anchorId || anchorId === selected) return [selected]
+    const a = visibleOrder.indexOf(anchorId)
+    const b = visibleOrder.indexOf(selected)
+    if (a === -1 || b === -1) return [selected]
+    const [lo, hi] = a < b ? [a, b] : [b, a]
+    return visibleOrder.slice(lo, hi + 1)
+  }, [selected, anchorId, visibleOrder])
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
+
   const select = (id: string) => {
     setFocus(null)
+    setAnchorId(null)
     setSelected(id)
   }
+
+  // Extend the multi-selection by moving the head one block along, keeping the
+  // anchor fixed (starting a range from the current head if there isn't one).
+  const extendSelection = (direction: "up" | "down") => {
+    if (!selected) return
+    const i = visibleOrder.indexOf(selected)
+    if (i === -1) return
+    const next = direction === "up" ? i - 1 : i + 1
+    if (next < 0 || next >= visibleOrder.length) return
+    if (!anchorId) setAnchorId(selected)
+    setFocus(null)
+    setSelected(visibleOrder[next])
+  }
+
+  // The top-level blocks of the selection (those with no selected ancestor), in
+  // document order — the roots to act on so a subtree is moved/copied once.
+  const selectionRoots = (): string[] => {
+    const set = selectedSet
+    return selectedIds.filter((id) => {
+      let parent = siblingsOf(doc, id)?.parentId ?? null
+      while (parent) {
+        if (set.has(parent)) return false
+        parent = siblingsOf(doc, parent)?.parentId ?? null
+      }
+      return true
+    })
+  }
+
+  const indentSelection = () => {
+    let next = doc
+    // In document order: each block's new previous sibling is the one the group
+    // is nesting under, so a contiguous sibling range nests together.
+    for (const id of selectionRoots()) next = indentBlock(next, id)
+    if (next !== doc) history.commit(doc, next, { type: "structural" })
+  }
+  const outdentSelection = () => {
+    let next = doc
+    // Reverse order keeps siblings in place as each is lifted out.
+    for (const id of [...selectionRoots()].reverse()) next = outdentBlock(next, id)
+    if (next !== doc) history.commit(doc, next, { type: "structural" })
+  }
+  const removeSelection = () => {
+    let next = doc
+    let focusId: string | null = null
+    for (const id of selectionRoots()) {
+      if (!next.blocks[id]) continue
+      const result = removeBlock(next, id)
+      next = result.doc
+      focusId = result.focusId
+    }
+    if (next === doc) return
+    // The focus target may itself have been part of the selection.
+    if (focusId && !next.blocks[focusId]) focusId = null
+    history.commit(doc, next, { type: "structural" })
+    setAnchorId(null)
+    setFocus(null)
+    // An emptied doc regains a blank block via the editor's trailing-blank rule.
+    setSelected(focusId ?? next.rootBlockIds[0] ?? null)
+  }
+
+  // Serialize the selected subtrees to block markdown (markers + nesting) so it
+  // round-trips through paste.
+  const selectionMarkdown = (): string => {
+    const lines: string[] = []
+    const walk = (id: string, depth: number) => {
+      const block = doc.blocks[id]
+      if (!block) return
+      lines.push("  ".repeat(depth) + block.content)
+      for (const childId of block.children) walk(childId, depth + 1)
+    }
+    for (const id of selectionRoots()) walk(id, 0)
+    return lines.join("\n")
+  }
+  const copySelection = () => {
+    void navigator.clipboard?.writeText(selectionMarkdown())
+  }
+  const cutSelection = () => {
+    copySelection()
+    removeSelection()
+  }
   // When the caller bumps `focusFirstSignal` (e.g. Down-arrow from the note
-  // title), drop into the first block in edit mode.
+  // title), highlight the first block — moving between the title and the blocks
+  // moves the highlight, like moving between blocks.
   useEffect(() => {
     if (!focusFirstSignal || readOnly) return
     const first = docRef.current.rootBlockIds[0]
     if (first) {
+      setFocus(null)
       setSelected(first)
-      setFocus({ id: first, atStart: true })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusFirstSignal])
 
   const edit = (id: string, atStart = false) => {
     if (readOnly) return
+    setAnchorId(null)
     setSelected(id)
     setFocus({ id, atStart })
   }
@@ -150,6 +255,7 @@ export function BlockEditor({
   // After restoring a snapshot, keep editing/selecting the same block if it
   // still exists; otherwise fall back to select mode on a valid block.
   const reconcileToDoc = (restored: BlockDoc) => {
+    setAnchorId(null)
     setFocus((cur) => (cur && restored.blocks[cur.id] ? cur : null))
     setSelected((cur) => (cur && restored.blocks[cur] ? cur : (restored.rootBlockIds[0] ?? null)))
   }
@@ -183,6 +289,8 @@ export function BlockEditor({
   // Interpret a command's result: commit any doc change to history, toggle
   // collapse, and move focus/selection where the command asked.
   const applyFocus = (intent: FocusIntent) => {
+    // Any single-target command collapses a multi-block selection.
+    setAnchorId(null)
     if (intent.mode === "select") {
       setFocus(null)
       setSelected(intent.id)
@@ -195,7 +303,14 @@ export function BlockEditor({
     if (result.doc) history.commit(doc, result.doc, result.op ?? { type: "structural" })
     if (result.toggleCollapse) toggleCollapse(result.toggleCollapse)
     if (result.focus) applyFocus(result.focus)
-    if (result.exitTop) onExitTop?.()
+    if (result.exitTop) {
+      // Leaving the top clears the block highlight so nothing stays selected
+      // below while focus moves up to the title.
+      setFocus(null)
+      setSelected(null)
+      setAnchorId(null)
+      onExitTop?.()
+    }
   }
 
   // The single entry point every keyboard handler funnels through: resolve the
@@ -214,10 +329,18 @@ export function BlockEditor({
   const api: BlockEditorApi = {
     focus,
     selected,
+    selectedSet,
+    selectionCount: selectedIds.length,
     collapsed,
     readOnly,
     select,
     edit,
+    extendSelection,
+    indentSelection,
+    outdentSelection,
+    removeSelection,
+    copySelection,
+    cutSelection,
     toggleCollapse,
     setFocus,
     onContentChange: (id, content) =>
