@@ -21,6 +21,7 @@ import {
   TagFillIcon16,
   TagIcon16,
 } from "./icons"
+import { NoteActionsMenu } from "./note-actions-menu"
 import { NoteFavicon } from "./note-favicon"
 import { SyncStatusIcon, useSyncStatusText } from "./sync-status"
 
@@ -115,10 +116,17 @@ export function NavItems({
             </li>
           </ul>
           {notes.length > 0 ? (
-            <ul className="flex flex-col gap-1">
+            <ul className="flex flex-col gap-1 border-t border-border-secondary pt-3">
               {notes.map((note) => (
-                <li key={note.id} className="flex">
+                <li key={note.id} className="group/note relative flex">
                   <NoteNavItem note={note} size={size} onNavigate={onNavigate} />
+                  {/* A per-note actions menu on hover. It's absolutely
+                      positioned (out of flow) so the name always truncates to
+                      the full row width — the ellipsis never leaves a gap for a
+                      button. A gradient masks the name's tail behind it. */}
+                  <div className="absolute inset-y-0 right-0 hidden items-center rounded-r bg-linear-to-l from-bg-hover from-60% to-transparent pl-8 pr-1 group-hover/note:flex has-data-[popup-open]:flex">
+                    <NoteActionsMenu note={note} />
+                  </div>
                 </li>
               ))}
             </ul>
