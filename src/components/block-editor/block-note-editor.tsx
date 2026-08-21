@@ -26,6 +26,7 @@ export function BlockNoteEditor({
   historyResetToken,
   startEditing,
   highlightHeading,
+  readOnly = false,
 }: {
   value: string
   onChange: (value: string) => void
@@ -41,6 +42,8 @@ export function BlockNoteEditor({
   startEditing?: boolean
   /** Heading text to highlight/scroll to on landing (e.g. from Cmd-K). */
   highlightHeading?: string
+  /** Display-only: render the note as read-only blocks (e.g. past-day history). */
+  readOnly?: boolean
 }) {
   const [doc, setDoc] = useState<BlockDoc>(() => withStarterBlock(parse(value)))
   const { collapsed, toggleCollapse } = useCollapseState(noteId)
@@ -59,6 +62,7 @@ export function BlockNoteEditor({
       highlightHeading={highlightHeading}
       collapsed={noteId ? collapsed : undefined}
       onToggleCollapse={noteId ? toggleCollapse : undefined}
+      readOnly={readOnly}
     />
   )
 }

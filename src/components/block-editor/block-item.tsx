@@ -25,6 +25,8 @@ export interface BlockEditorApi {
   /** The highlighted block in select mode (null while editing or unfocused). */
   selected: string | null
   collapsed: Set<string>
+  /** Display-only: no editing, selection, or mutation (collapse still works). */
+  readOnly?: boolean
   /** Highlight a block (leaves edit mode). */
   select: (id: string) => void
   /** Enter edit mode for a block. */
@@ -99,7 +101,8 @@ export function BlockItem({
   depth: number
   api: BlockEditorApi
 }) {
-  const editing = api.focus?.id === block.id
+  const readOnly = api.readOnly ?? false
+  const editing = !readOnly && api.focus?.id === block.id
   const selected = api.selected === block.id && !editing
   const hasChildren = block.children.length > 0
   const isCollapsed = api.collapsed.has(block.id)
@@ -269,9 +272,10 @@ export function BlockItem({
         <input
           type="checkbox"
           checked={type.checked}
+          disabled={readOnly}
           onClick={(event) => event.stopPropagation()}
           onChange={() => api.onContentChange(block.id, toggleTodo(block.content))}
-          className="size-4 cursor-pointer accent-text"
+          className={cx("size-4 accent-text", readOnly ? "cursor-default" : "cursor-pointer")}
         />
       </span>
     ) : type.kind === "bullet" ? (
@@ -339,18 +343,23 @@ export function BlockItem({
             ) : (
               <div
                 ref={viewRef}
-                role="button"
-                tabIndex={0}
                 data-testid="block-body"
                 data-block-id={block.id}
                 className={cx(
-                  "min-h-[1lh] min-w-0 flex-1 cursor-text outline-none",
+                  "min-h-[1lh] min-w-0 flex-1 outline-none",
+                  !readOnly && "cursor-text",
                   typo,
                   type.kind === "todo" && type.checked && "text-text-secondary line-through",
                 )}
-                onClick={() => api.select(block.id)}
-                onDoubleClick={() => api.edit(block.id)}
-                onKeyDown={handleSelectKeyDown}
+                {...(readOnly
+                  ? {}
+                  : {
+                      role: "button" as const,
+                      tabIndex: 0,
+                      onClick: () => api.select(block.id),
+                      onDoubleClick: () => api.edit(block.id),
+                      onKeyDown: handleSelectKeyDown,
+                    })}
               >
                 <BlockContent content={body} doc={doc} />
               </div>

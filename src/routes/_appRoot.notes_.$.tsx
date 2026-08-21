@@ -149,14 +149,15 @@ function NotePage() {
   const note = useNoteById(noteId)
   const isDailyNote = isValidDateString(noteId ?? "")
   const isWeeklyNote = isValidWeekString(noteId ?? "")
-  // Regular notes use the block editor; daily/weekly (calendar) notes keep the
-  // classic editor so their date navigation is preserved.
-  const useBlockEditor = !isDailyNote && !isWeeklyNote
   // A daily note is editable only for the current day. Past/future days show a
   // read-only, git-reconstructed view of what was written that day (the
   // calendar time machine). "Today" is resolved in the current timezone, to
   // match the floating YYYY-MM-DD note naming.
   const isReadOnlyDailyNote = isDailyNote && noteId !== toDateString(new Date())
+  // Regular notes and today's editable daily note use the block editor; weekly
+  // notes keep the classic editor; past/future daily notes render read-only
+  // history (see DayActivity below).
+  const useBlockEditor = !isWeeklyNote && !isReadOnlyDailyNote
   const searchNotes = useSearchNotes()
   const saveNote = useSaveNote()
   const backlinks = React.useMemo(() => {
@@ -734,7 +735,7 @@ function NotePage() {
 
             {useBlockEditor ? (
               <div className="flex flex-col gap-3">
-                <NoteTitle noteId={noteId ?? ""} onRename={renameTo} />
+                {!isDailyNote ? <NoteTitle noteId={noteId ?? ""} onRename={renameTo} /> : null}
                 <BlockNoteEditor
                   key={noteId}
                   noteId={noteId}

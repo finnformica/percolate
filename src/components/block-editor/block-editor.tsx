@@ -61,6 +61,7 @@ export function BlockEditor({
   highlightHeading,
   collapsed: collapsedProp,
   onToggleCollapse,
+  readOnly = false,
 }: {
   doc: BlockDoc
   onChange: (doc: BlockDoc) => void
@@ -77,6 +78,8 @@ export function BlockEditor({
    */
   collapsed?: Set<string>
   onToggleCollapse?: (id: string) => void
+  /** Display-only: renders blocks without any editing (e.g. past-day history). */
+  readOnly?: boolean
 }) {
   const firstBlockId = doc.rootBlockIds[0] ?? null
   const [focus, setFocus] = useState<FocusRequest | null>(() =>
@@ -123,6 +126,7 @@ export function BlockEditor({
     setSelected(id)
   }
   const edit = (id: string, atStart = false) => {
+    if (readOnly) return
     setSelected(id)
     setFocus({ id, atStart })
   }
@@ -151,6 +155,7 @@ export function BlockEditor({
     focus,
     selected,
     collapsed,
+    readOnly,
     select,
     edit,
     escapeEdit: (id) => select(id),

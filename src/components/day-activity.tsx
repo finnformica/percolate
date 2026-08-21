@@ -2,9 +2,12 @@ import React from "react"
 import { useDayActivity } from "../data/history"
 import type { ChangedNote, DayCommit } from "../data/history-parse"
 import { formatTimeOfDay } from "../utils/date"
+import { BlockNoteEditor } from "./block-editor/block-note-editor"
 import { LoadingIcon16 } from "./icons"
-import { MarkdownContent } from "./markdown"
 import { NoteLink } from "./note-link"
+
+/** onChange is never called in read-only mode; provided to satisfy the prop. */
+const noop = () => {}
 
 /**
  * Read-only "what was written that day" view for a past calendar date,
@@ -64,7 +67,7 @@ function ChangedNoteSection({ note }: { note: ChangedNote }) {
         <NoteLink id={note.noteId} />
       </h2>
       {note.addedText ? (
-        <MarkdownContent>{note.addedText}</MarkdownContent>
+        <BlockNoteEditor value={note.addedText} onChange={noop} readOnly />
       ) : (
         <p className="italic text-text-secondary">{statusLabel(note.status)}</p>
       )}
