@@ -12,6 +12,7 @@ import {
 } from "../../blocks/commands"
 import { resolveKey, type KeyLike } from "../../blocks/keymap"
 import { parse } from "../../blocks/parse"
+import { toDisplayMarkdown } from "../../blocks/to-display-markdown"
 import {
   emptyBlock,
   indentBlock,
@@ -47,6 +48,23 @@ function findHeadingBlockId(doc: BlockDoc, heading: string): string | null {
   }
   walk(doc.rootBlockIds)
   return found
+}
+
+/** The nearest ancestor that actually scrolls vertically (the note's <main>),
+ * or null if none — in which case the window is the scroller. */
+function scrollParentOf(el: HTMLElement): HTMLElement | null {
+  let node = el.parentElement
+  while (node) {
+    const overflowY = getComputedStyle(node).overflowY
+    if (
+      (overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay") &&
+      node.scrollHeight > node.clientHeight
+    ) {
+      return node
+    }
+    node = node.parentElement
+  }
+  return null
 }
 
 /** The first block (in document order) present in `restored` but not in
@@ -90,6 +108,7 @@ export function BlockEditor({
   onToggleCollapse,
   onExitTop,
   focusFirstSignal,
+  focusFirstMode = "select",
   newRootSignal,
   readOnly = false,
 }: {
@@ -111,6 +130,8 @@ export function BlockEditor({
   onExitTop?: () => void
   /** Bump this (e.g. Down-arrow from the note title) to focus the first block. */
   focusFirstSignal?: number
+  /** Whether `focusFirstSignal` opens the first block editing or just highlighted. */
+  focusFirstMode?: "edit" | "select"
   /** Bump this (e.g. Cmd+Enter on the note title) to add a new root block. */
   newRootSignal?: number
   /** Display-only: renders blocks without any editing (e.g. past-day history). */
@@ -272,10 +293,12 @@ export function BlockEditor({
   useEffect(() => {
     if (!focusFirstSignal || readOnly) return
     const first = docRef.current.rootBlockIds[0]
-    if (first) {
-      setFocus(null)
-      setSelected(first)
-    }
+    if (!first) return
+    setAnchorId(null)
+    setSelected(first)
+    // Mirror the title's own state: editing the title drops into the first block
+    // editing (caret at its start); a highlighted title just highlights it.
+    setFocus(focusFirstMode === "edit" ? { id: first, atStart: true } : null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusFirstSignal])
 
@@ -493,18 +516,39 @@ export function BlockEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, focus, anchorId, doc, readOnly])
 
-  // Keep the highlighted block in a comfortable band (roughly the middle) as it
-  // moves, since focusing the container itself no longer scrolls it into view.
+  // Keep the highlighted block in a comfortable middle band as it moves, since
+  // focusing the container itself no longer scrolls it into view. We scroll the
+  // block's own scroll container (the note's <main>), not the window, and move
+  // only the minimum needed to bring the row just inside the band — so stepping
+  // through blocks glides instead of yanking to centre on every crossing (which
+  // was especially jarring on tall, margin-topped headings).
   useLayoutEffect(() => {
     if (readOnly || focus || !selected) return
     const el = containerRef.current?.querySelector<HTMLElement>(`[data-block-row="${selected}"]`)
-    if (!el) return
+    if (!el || typeof el.getBoundingClientRect !== "function") return
+
+    const scroller = scrollParentOf(el)
+    const view = scroller
+      ? scroller.getBoundingClientRect()
+      : { top: 0, height: window.innerHeight || document.documentElement.clientHeight }
     const rect = el.getBoundingClientRect()
-    const vh = window.innerHeight || document.documentElement.clientHeight
-    // Only scroll when it drifts out of the middle ~60% — small moves don't jump.
-    if (rect.top < vh * 0.2 || rect.bottom > vh * 0.8) {
-      if (typeof el.scrollIntoView === "function")
-        el.scrollIntoView({ block: "center", behavior: "auto" })
+    const top = rect.top - view.top
+    const bottom = rect.bottom - view.top
+    // The band is the middle half: keep the row between 25% and 75% of the view.
+    const pad = view.height * 0.25
+    let delta = 0
+    if (top < pad) delta = top - pad
+    else if (bottom > view.height - pad) delta = bottom - (view.height - pad)
+    if (delta === 0) return
+
+    if (scroller && typeof scroller.scrollBy === "function") {
+      scroller.scrollBy({ top: delta })
+    } else if (
+      !scroller &&
+      typeof window.scrollBy === "function" &&
+      document.documentElement.scrollHeight > window.innerHeight
+    ) {
+      window.scrollBy({ top: delta })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, focus, readOnly])
@@ -543,7 +587,10 @@ export function BlockEditor({
     // Only take over for multi-block selections; a partial single-block copy
     // is better served by the plain selected text.
     if (picked.length < 2) return
-    event.clipboardData.setData("text/plain", picked.join("\n"))
+    // Route through the same display-markdown path as every other copy action so
+    // the result is clean markdown (blank lines between prose, GFM todos) rather
+    // than raw block lines with bare `[ ]` markers run together.
+    event.clipboardData.setData("text/plain", toDisplayMarkdown(picked.join("\n")))
     event.preventDefault()
   }
 

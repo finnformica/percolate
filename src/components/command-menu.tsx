@@ -8,6 +8,7 @@ import { useHotkeys } from "react-hotkeys-hook"
 import { useDebounce } from "use-debounce"
 import { githubRepoAtom, notesAtom, pinnedNotesAtom, tagSearcherAtom } from "../global-state"
 import { useNoteById, useSaveNote } from "../hooks/note"
+import { copyAsMarkdown } from "../utils/copy-markdown"
 import { useSearchNotes } from "../hooks/search-notes"
 import { Note } from "../schema"
 import { formatDate, formatDateDistance, toDateString } from "../utils/date"
@@ -172,7 +173,7 @@ export function CommandMenu() {
         label: "Copy note markdown",
         icon: <CopyIcon16 />,
         onSelect: () => {
-          copy(note.content)
+          copyAsMarkdown(note.content)
         },
       },
       {

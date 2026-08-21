@@ -118,18 +118,14 @@ export function NavItems({
           {notes.length > 0 ? (
             <ul className="flex flex-col gap-1 border-t border-border-secondary pt-3">
               {notes.map((note) => (
-                <li key={note.id} className="group/note relative flex">
-                  {/* The note fills the row; on hover its text makes just enough
-                      room for the actions menu, which sits inside the row at the
-                      right edge (absolutely positioned, so it reads as part of
-                      the note button rather than a separate control). */}
-                  <NoteNavItem
-                    note={note}
-                    size={size}
-                    onNavigate={onNavigate}
-                    className="group-hover/note:pr-7"
-                  />
-                  <div className="absolute inset-y-0 right-1 hidden items-center group-hover/note:flex has-data-[popup-open]:flex">
+                <li key={note.id} className="group/note flex items-center">
+                  {/* The note fills the row; on hover the actions menu takes its
+                      own space to the right (a real flex sibling), so the note
+                      name truncates with an ellipsis to make room rather than
+                      sitting under the button. The menu stays visible while its
+                      dropdown is open. */}
+                  <NoteNavItem note={note} size={size} onNavigate={onNavigate} />
+                  <div className="hidden shrink-0 pl-0.5 group-hover/note:flex has-data-[popup-open]:flex">
                     <NoteActionsMenu
                       noteId={note.id}
                       content={note.content}

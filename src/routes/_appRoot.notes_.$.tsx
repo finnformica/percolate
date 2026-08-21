@@ -169,6 +169,9 @@ function NotePage() {
   // titleFocusSignal to select the title (arrow up past the first block); the
   // title bumps focusFirstSignal to move back into the first block (arrow down).
   const [focusFirstSignal, setFocusFirstSignal] = useState(0)
+  // Whether the last title→editor hand-off should open the first block editing
+  // (title was being edited) or just highlighted (title was highlighted).
+  const [focusFirstMode, setFocusFirstMode] = useState<"edit" | "select">("select")
   const [titleFocusSignal, setTitleFocusSignal] = useState(0)
   const [newRootSignal, setNewRootSignal] = useState(0)
 
@@ -339,6 +342,7 @@ function NotePage() {
                 onWidth: updateWidth,
                 onShare: () => setIsShareDialogOpen(true),
                 canShare: !isSignedOut && !!note && !!online,
+                onDeleted: () => navigate({ to: "/", search: { query: undefined }, replace: true }),
               }}
             />
             <ShareDialog
@@ -403,7 +407,10 @@ function NotePage() {
                   <NoteTitle
                     noteId={noteId ?? ""}
                     onRename={renameTo}
-                    onArrowDown={() => setFocusFirstSignal((n) => n + 1)}
+                    onArrowDown={(mode) => {
+                      setFocusFirstMode(mode)
+                      setFocusFirstSignal((n) => n + 1)
+                    }}
                     onCreateBelow={() => setNewRootSignal((n) => n + 1)}
                     focusSignal={titleFocusSignal}
                   />
@@ -417,6 +424,7 @@ function NotePage() {
                   highlightHeading={highlightHeading}
                   onExitTop={() => setTitleFocusSignal((n) => n + 1)}
                   focusFirstSignal={focusFirstSignal}
+                  focusFirstMode={focusFirstMode}
                   newRootSignal={newRootSignal}
                 />
               </div>

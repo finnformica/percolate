@@ -123,9 +123,14 @@ function sameTypeMarker(type: BlockType): string {
   }
 }
 
-/** Keep the current block focused, in whichever mode we're already in. */
-function keepFocus(mode: Mode, id: string): FocusIntent {
-  return mode === "edit" ? { mode: "edit", id } : { mode: "select", id }
+/**
+ * Keep the current block focused, in whichever mode we're already in. When a
+ * caret is passed (edit mode), preserve its position so an operation that only
+ * reshapes the tree — indent, outdent, reorder — doesn't fling the cursor to the
+ * end of the block.
+ */
+function keepFocus(mode: Mode, id: string, caret?: CaretInput): FocusIntent {
+  return mode === "edit" ? { mode: "edit", id, caret: caret?.start } : { mode: "select", id }
 }
 
 /** Move the highlight to the previous / next visible block (select mode). */
@@ -224,20 +229,21 @@ export const COMMANDS: Record<CommandName, Command> = {
   /** Edit → back to highlighting the block. */
   exitEdit: ({ id }) => ({ handled: true, focus: { mode: "select", id } }),
 
-  /** Nest the block under its previous sibling; keeps the current mode/focus. */
-  indent: ({ doc, id, mode }) => {
+  /** Nest the block under its previous sibling; keeps the current mode/focus
+   * (and, when editing, the caret position). */
+  indent: ({ doc, id, mode, caret }) => {
     const next = indentBlock(doc, id)
     // Consume the key even when it can't indent (no previous sibling), so Tab
     // never escapes the editor.
-    if (next === doc) return { handled: true }
-    return { handled: true, doc: next, op: STRUCTURAL, focus: keepFocus(mode, id) }
+    if (next === doc) return { handled: true, focus: keepFocus(mode, id, caret) }
+    return { handled: true, doc: next, op: STRUCTURAL, focus: keepFocus(mode, id, caret) }
   },
 
   /** Lift the block out to become a sibling of its parent. */
-  outdent: ({ doc, id, mode }) => {
+  outdent: ({ doc, id, mode, caret }) => {
     const next = outdentBlock(doc, id)
-    if (next === doc) return { handled: true }
-    return { handled: true, doc: next, op: STRUCTURAL, focus: keepFocus(mode, id) }
+    if (next === doc) return { handled: true, focus: keepFocus(mode, id, caret) }
+    return { handled: true, doc: next, op: STRUCTURAL, focus: keepFocus(mode, id, caret) }
   },
 
   moveSelectionUp: moveSelection("up"),
@@ -266,16 +272,17 @@ export const COMMANDS: Record<CommandName, Command> = {
     return { handled: true, focus: keepFocus(mode, info.siblings[info.siblings.length - 1]) }
   },
 
-  /** Reorder the block among its siblings (subtree comes along). */
-  moveBlockUp: ({ doc, id, mode }) => {
+  /** Reorder the block among its siblings (subtree comes along). Preserves the
+   * caret when editing so the cursor rides along with the moved block. */
+  moveBlockUp: ({ doc, id, mode, caret }) => {
     const next = moveBlock(doc, id, "up")
     if (next === doc) return { handled: true }
-    return { handled: true, doc: next, op: STRUCTURAL, focus: keepFocus(mode, id) }
+    return { handled: true, doc: next, op: STRUCTURAL, focus: keepFocus(mode, id, caret) }
   },
-  moveBlockDown: ({ doc, id, mode }) => {
+  moveBlockDown: ({ doc, id, mode, caret }) => {
     const next = moveBlock(doc, id, "down")
     if (next === doc) return { handled: true }
-    return { handled: true, doc: next, op: STRUCTURAL, focus: keepFocus(mode, id) }
+    return { handled: true, doc: next, op: STRUCTURAL, focus: keepFocus(mode, id, caret) }
   },
 
   /** Delete the highlighted block and its subtree (select mode). */

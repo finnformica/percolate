@@ -51,10 +51,11 @@ describe("indent / outdent", () => {
     expect(result.focus).toEqual({ mode: "select", id: "c" })
   })
 
-  it("keeps edit focus when indenting in edit mode", () => {
+  it("keeps edit focus and the caret position when indenting in edit mode", () => {
     const doc = fixture()
-    const result = runCommand("indent", input(doc, "c", { mode: "edit" }))
-    expect(result.focus).toEqual({ mode: "edit", id: "c" })
+    const result = runCommand("indent", input(doc, "c", { mode: "edit", caret: caret("C", 1) }))
+    // The caret rides along with the block rather than jumping to its end.
+    expect(result.focus).toEqual({ mode: "edit", id: "c", caret: 1 })
   })
 
   it("consumes the key but does nothing when it cannot indent", () => {

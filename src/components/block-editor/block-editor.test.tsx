@@ -85,6 +85,33 @@ describe("BlockEditor focus + keyboard", () => {
     expect(highlightedText(container)).toBe("B")
   })
 
+  it("hands off from the title into the first block editing when mode is edit", () => {
+    // focusFirstSignal truthy on mount fires the hand-off effect once; mode
+    // "edit" should open the first block's textarea (title was being edited).
+    const { container } = render(
+      <BlockEditor
+        doc={withStarter(parse("A\nB"))}
+        onChange={() => {}}
+        focusFirstSignal={1}
+        focusFirstMode="edit"
+      />,
+    )
+    expect(container.querySelector("textarea")).not.toBeNull()
+  })
+
+  it("hands off from the title into the first block highlighted when mode is select", () => {
+    const { container } = render(
+      <BlockEditor
+        doc={withStarter(parse("A\nB"))}
+        onChange={() => {}}
+        focusFirstSignal={1}
+        focusFirstMode="select"
+      />,
+    )
+    expect(container.querySelector("textarea")).toBeNull()
+    expect(highlightedText(container)).toBe("A")
+  })
+
   it("extends a multi-block selection with Shift+Arrow", () => {
     const { container } = render(<Harness initial={"A\nB\nC"} />)
     const root = editorRoot(container)

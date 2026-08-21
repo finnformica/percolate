@@ -44,6 +44,7 @@ export function BlockNoteEditor({
   highlightHeading,
   onExitTop,
   focusFirstSignal,
+  focusFirstMode,
   newRootSignal,
   readOnly = false,
 }: {
@@ -63,6 +64,8 @@ export function BlockNoteEditor({
   onExitTop?: () => void
   /** Bump to move focus into the first block (e.g. Down-arrow from the title). */
   focusFirstSignal?: number
+  /** Whether that hand-off opens the first block editing or just highlighted. */
+  focusFirstMode?: "edit" | "select"
   /** Bump to add a new root block (e.g. Cmd+Enter from the title). */
   newRootSignal?: number
   /** Display-only: render the note as read-only blocks (e.g. past-day history). */
@@ -92,6 +95,7 @@ export function BlockNoteEditor({
       onToggleCollapse={noteId ? toggleCollapse : undefined}
       onExitTop={onExitTop}
       focusFirstSignal={focusFirstSignal}
+      focusFirstMode={focusFirstMode}
       newRootSignal={newRootSignal}
       readOnly={readOnly}
     />

@@ -36,6 +36,8 @@ interface EditorActions {
   onWidth?: (width: Width) => void
   onShare?: () => void
   canShare?: boolean
+  /** Called after the open note is deleted, so the page can navigate away. */
+  onDeleted?: () => void
 }
 
 /**
@@ -77,7 +79,13 @@ export function NoteActionsMenu({
   const renameNote = useRenameNote()
   const deleteNote = useDeleteNote()
 
-  const isViewing = location.pathname === `/notes/${noteId}`
+  // Compare the decoded path segment, not the raw pathname: a note id with a
+  // space or other special character is percent-encoded in the URL, so a raw
+  // `=== /notes/${noteId}` check would miss it and skip the post-delete redirect.
+  const openNoteId = location.pathname.startsWith("/notes/")
+    ? decodeURIComponent(location.pathname.slice("/notes/".length))
+    : ""
+  const isViewing = openNoteId === noteId
 
   const applyContent = (next: string) => {
     if (onContentChange) onContentChange(next)
@@ -132,7 +140,11 @@ export function NoteActionsMenu({
     }
     clearNoteDraft({ githubRepo, noteId })
     deleteNote(noteId)
-    if (isViewing) {
+    // The header menu passes onDeleted (it's always the open note); the sidebar
+    // menu falls back to the path check so deleting the note you're viewing from
+    // the list also takes you home.
+    if (editor?.onDeleted) editor.onDeleted()
+    else if (isViewing) {
       navigate({ to: "/", search: { query: undefined }, replace: true })
     }
   }

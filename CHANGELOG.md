@@ -33,6 +33,12 @@
 - <kbd>⌘⇧↑/↓</kbd> now moves the highlighted block again (it had started extending the selection instead).
 - <kbd>⌘C</kbd> copies a single highlighted block again.
 - While editing the note title, <kbd>↓</kbd> now drops into the first block below.
+- Stepping the highlight through the outline now glides — it eases the block into the middle of the view and only when needed, instead of yanking to centre on tall headings.
+- Every copy action (<kbd>⌘C</kbd>, a multi-block selection, "Copy markdown" in the menu and command palette) now goes through one path, so the result is always clean markdown — blank lines between paragraphs, real task-list checkboxes, and never a stray `id::` line.
+- Pressing <kbd>↓</kbd> while renaming the note title now drops into the first block already editing (caret ready), matching how <kbd>↓</kbd> moves between blocks.
+- Deleting the note you're currently viewing now takes you back to the notes list.
+- <kbd>⇥</kbd> / <kbd>⇧⇥</kbd> while editing a block now keep the cursor where it is instead of jumping it to the end of the line.
+- The sidebar note actions menu now sits beside the note name (which truncates to make room) instead of overlapping it.
 
 ### Removed
 

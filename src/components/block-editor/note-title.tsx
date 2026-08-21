@@ -24,8 +24,13 @@ export function NoteTitle({
 }: {
   noteId: string
   onRename: (name: string) => boolean
-  /** Down-arrow while the title is selected returns focus to the editor. */
-  onArrowDown?: () => void
+  /**
+   * Down-arrow returns focus to the editor below. The mode mirrors the title's
+   * own: from an edited title it drops into the first block *editing* (like
+   * moving between blocks with the caret); from a highlighted title it just
+   * highlights the first block.
+   */
+  onArrowDown?: (mode: "edit" | "select") => void
   /** Cmd/Shift+Enter while the title is selected adds a new root block. */
   onCreateBelow?: () => void
   /** Bump to select the title from the keyboard (arrow-up past the first block). */
@@ -106,12 +111,14 @@ export function NoteTitle({
               setEditing(false)
               setSelected(true)
             } else if (event.key === "ArrowDown") {
-              // The title is a single line, so Down drops into the editor below.
+              // The title is a single line, so Down drops into the editor below —
+              // and since we're editing the title, the first block opens editing
+              // too, matching how Down moves the caret between blocks.
               event.preventDefault()
               commit()
               setEditing(false)
               setSelected(false)
-              onArrowDown?.()
+              onArrowDown?.("edit")
             }
           }}
           spellCheck={false}
@@ -143,7 +150,7 @@ export function NoteTitle({
             } else if (event.key === "ArrowDown") {
               event.preventDefault()
               setSelected(false)
-              onArrowDown?.()
+              onArrowDown?.("select")
             }
           }}
           className={cx(
