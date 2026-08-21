@@ -1,18 +1,24 @@
-import { useState } from "react"
+import { forwardRef, useState } from "react"
 
 /**
  * The note's name shown as an editable `# ` heading at the top of the page —
  * outside the block flow, but editable to rename the note. Commits on Enter or
  * blur; Escape reverts. `onRename` returns whether the rename succeeded so the
  * field can revert on failure (invalid name, duplicate).
+ *
+ * Forwards a ref to the underlying input so the block editor can hand keyboard
+ * focus up to the title (navigating up past the first block); `onArrowDown`
+ * lets focus flow back down into the editor.
  */
-export function NoteTitle({
-  noteId,
-  onRename,
-}: {
-  noteId: string
-  onRename: (name: string) => boolean
-}) {
+export const NoteTitle = forwardRef<
+  HTMLInputElement,
+  {
+    noteId: string
+    onRename: (name: string) => boolean
+    /** Down-arrow at the title returns focus to the editor below. */
+    onArrowDown?: () => void
+  }
+>(function NoteTitle({ noteId, onRename, onArrowDown }, ref) {
   const [value, setValue] = useState(noteId)
   // Reset the field when navigating to a different note (no effect needed).
   const [prevId, setPrevId] = useState(noteId)
@@ -43,6 +49,7 @@ export function NoteTitle({
         #
       </span>
       <input
+        ref={ref}
         value={value}
         onChange={(event) => setValue(event.target.value)}
         onBlur={commit}
@@ -53,6 +60,11 @@ export function NoteTitle({
           } else if (event.key === "Escape") {
             setValue(noteId)
             event.currentTarget.blur()
+          } else if (event.key === "ArrowDown" && onArrowDown) {
+            // Drop back into the editor below, like moving between blocks.
+            event.preventDefault()
+            commit()
+            onArrowDown()
           }
         }}
         spellCheck={false}
@@ -62,4 +74,4 @@ export function NoteTitle({
       />
     </h1>
   )
-}
+})

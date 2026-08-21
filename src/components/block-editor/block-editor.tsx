@@ -60,6 +60,8 @@ export function BlockEditor({
   highlightHeading,
   collapsed: collapsedProp,
   onToggleCollapse,
+  onExitTop,
+  focusFirstSignal,
   readOnly = false,
 }: {
   doc: BlockDoc
@@ -75,6 +77,11 @@ export function BlockEditor({
    */
   collapsed?: Set<string>
   onToggleCollapse?: (id: string) => void
+  /** Called when the user navigates up past the first block — lets the caller
+   * move focus to whatever sits above the editor (e.g. the note title). */
+  onExitTop?: () => void
+  /** Bump this (e.g. Down-arrow from the note title) to focus the first block. */
+  focusFirstSignal?: number
   /** Display-only: renders blocks without any editing (e.g. past-day history). */
   readOnly?: boolean
 }) {
@@ -122,6 +129,18 @@ export function BlockEditor({
     setFocus(null)
     setSelected(id)
   }
+  // When the caller bumps `focusFirstSignal` (e.g. Down-arrow from the note
+  // title), drop into the first block in edit mode.
+  useEffect(() => {
+    if (!focusFirstSignal || readOnly) return
+    const first = docRef.current.rootBlockIds[0]
+    if (first) {
+      setSelected(first)
+      setFocus({ id: first, atStart: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusFirstSignal])
+
   const edit = (id: string, atStart = false) => {
     if (readOnly) return
     setSelected(id)
@@ -176,6 +195,7 @@ export function BlockEditor({
     if (result.doc) history.commit(doc, result.doc, result.op ?? { type: "structural" })
     if (result.toggleCollapse) toggleCollapse(result.toggleCollapse)
     if (result.focus) applyFocus(result.focus)
+    if (result.exitTop) onExitTop?.()
   }
 
   // The single entry point every keyboard handler funnels through: resolve the

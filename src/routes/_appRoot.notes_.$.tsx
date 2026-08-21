@@ -183,6 +183,12 @@ function NotePage() {
   const { ref: containerRef, width: containerWidth = 0 } = useResizeObserver()
   const [isShareDialogOpen, setIsShareDialogOpen] = React.useState(false)
 
+  // Keyboard flow between the note title and the block editor: the editor calls
+  // onExitTop to focus the title (arrow up past the first block); bumping the
+  // signal drops focus back into the first block (arrow down from the title).
+  const titleRef = React.useRef<HTMLInputElement>(null)
+  const [focusFirstSignal, setFocusFirstSignal] = useState(0)
+
   // Actions
   const deleteNote = useDeleteNote()
   const renameNote = useRenameNote()
@@ -534,7 +540,12 @@ function NotePage() {
             {useBlockEditor ? (
               <div className="flex flex-col gap-3">
                 {!isDailyNote && !isWeeklyNote ? (
-                  <NoteTitle noteId={noteId ?? ""} onRename={renameTo} />
+                  <NoteTitle
+                    ref={titleRef}
+                    noteId={noteId ?? ""}
+                    onRename={renameTo}
+                    onArrowDown={() => setFocusFirstSignal((n) => n + 1)}
+                  />
                 ) : null}
                 <BlockNoteEditor
                   key={noteId}
@@ -543,6 +554,8 @@ function NotePage() {
                   onChange={setEditorValue}
                   startEditing={!note}
                   highlightHeading={highlightHeading}
+                  onExitTop={() => titleRef.current?.focus()}
+                  focusFirstSignal={focusFirstSignal}
                 />
               </div>
             ) : (

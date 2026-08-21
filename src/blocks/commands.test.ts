@@ -79,11 +79,20 @@ describe("selection movement", () => {
     expect(result.focus).toEqual({ mode: "select", id: "b1" })
   })
 
-  it("consumes the key at the ends without moving (so the page never scrolls)", () => {
+  it("signals exitTop when moving up past the first block", () => {
     const doc = fixture()
     const result = runCommand("moveSelectionUp", input(doc, "a"))
     expect(result.handled).toBe(true)
     expect(result.focus).toBeUndefined()
+    expect(result.exitTop).toBe(true)
+  })
+
+  it("consumes the key at the bottom without moving or exiting", () => {
+    const doc = fixture()
+    const result = runCommand("moveSelectionDown", input(doc, "c"))
+    expect(result.handled).toBe(true)
+    expect(result.focus).toBeUndefined()
+    expect(result.exitTop).toBeUndefined()
   })
 
   it("moves edit focus to the neighbour, caret at end going up / start going down", () => {

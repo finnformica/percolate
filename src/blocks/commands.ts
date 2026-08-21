@@ -72,6 +72,9 @@ export interface CommandResult {
   focus?: FocusIntent
   /** Id whose collapse state should toggle. */
   toggleCollapse?: string
+  /** Navigation tried to move above the first block — the caller may hand focus
+   * to whatever sits above the editor (e.g. the note title). */
+  exitTop?: boolean
 }
 
 type Command = (input: CommandInput) => CommandResult
@@ -111,8 +114,10 @@ function moveSelection(direction: "up" | "down"): Command {
     const i = visibleOrder.indexOf(id)
     if (i === -1) return { handled: true }
     const next = direction === "up" ? i - 1 : i + 1
-    // Consume the key even at the ends, so the page never scrolls instead.
-    if (next < 0 || next >= visibleOrder.length) return { handled: true }
+    // Moving up past the first block hands focus to whatever's above the editor.
+    if (next < 0) return { handled: true, exitTop: true }
+    // Consume the key at the bottom too, so the page never scrolls instead.
+    if (next >= visibleOrder.length) return { handled: true }
     return { handled: true, focus: { mode: "select", id: visibleOrder[next] } }
   }
 }
@@ -123,7 +128,7 @@ function moveEditFocus(direction: "up" | "down"): Command {
     const i = visibleOrder.indexOf(id)
     if (direction === "up") {
       if (i > 0) return { handled: true, focus: { mode: "edit", id: visibleOrder[i - 1] } }
-      return { handled: true }
+      return { handled: true, exitTop: true }
     }
     if (i >= 0 && i < visibleOrder.length - 1) {
       return { handled: true, focus: { mode: "edit", id: visibleOrder[i + 1], atStart: true } }

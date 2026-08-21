@@ -42,6 +42,8 @@ export function BlockNoteEditor({
   noteId,
   startEditing,
   highlightHeading,
+  onExitTop,
+  focusFirstSignal,
   readOnly = false,
 }: {
   value: string
@@ -56,6 +58,10 @@ export function BlockNoteEditor({
   startEditing?: boolean
   /** Heading text to highlight/scroll to on landing (e.g. from Cmd-K). */
   highlightHeading?: string
+  /** Navigating up past the first block hands focus here (e.g. the note title). */
+  onExitTop?: () => void
+  /** Bump to move focus into the first block (e.g. Down-arrow from the title). */
+  focusFirstSignal?: number
   /** Display-only: render the note as read-only blocks (e.g. past-day history). */
   readOnly?: boolean
 }) {
@@ -81,6 +87,8 @@ export function BlockNoteEditor({
       highlightHeading={highlightHeading}
       collapsed={noteId ? collapsed : undefined}
       onToggleCollapse={noteId ? toggleCollapse : undefined}
+      onExitTop={onExitTop}
+      focusFirstSignal={focusFirstSignal}
       readOnly={readOnly}
     />
   )
