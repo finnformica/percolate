@@ -63,6 +63,12 @@ export const githubUserSchema = z.object({
   login: z.string(),
   name: z.string(),
   email: z.string(),
+  // Epoch-ms expiries for the short-lived access token and the long-lived
+  // refresh token. Non-sensitive (the refresh token itself lives only in an
+  // HttpOnly cookie); these drive silent refresh and the session-status UI.
+  // Optional so pre-refresh sessions and the dev PAT path still parse.
+  accessTokenExpiresAt: z.number().optional(),
+  refreshTokenExpiresAt: z.number().optional(),
 })
 
 export type GitHubUser = z.infer<typeof githubUserSchema>

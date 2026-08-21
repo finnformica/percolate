@@ -3,6 +3,7 @@
 // the token and user info in the query string.
 // Reference: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps
 
+import { refreshCookie } from "../github-cookie"
 import type { Env } from "../types"
 
 export async function githubAuth(request: Request, env: Env): Promise<Response> {
@@ -24,9 +25,18 @@ export async function githubAuth(request: Request, env: Env): Promise<Response> 
       }),
     })
 
-    const { error, access_token: token } = (await response.json()) as {
+    const {
+      error,
+      access_token: token,
+      refresh_token: refreshToken,
+      expires_in: expiresIn,
+      refresh_token_expires_in: refreshExpiresIn,
+    } = (await response.json()) as {
       error?: string
       access_token?: string
+      refresh_token?: string
+      expires_in?: number
+      refresh_token_expires_in?: number
     }
 
     if (error || !token) {
@@ -44,8 +54,24 @@ export async function githubAuth(request: Request, env: Env): Promise<Response> 
     redirectUrl.searchParams.set("user_login", login)
     redirectUrl.searchParams.set("user_name", name)
     redirectUrl.searchParams.set("user_email", email)
+    // Pass the (non-sensitive) expiry timestamps so the client can drive silent
+    // refresh and the session-status UI. Absent when the OAuth app has token
+    // expiration disabled — the client then treats the token as non-expiring.
+    if (typeof expiresIn === "number") {
+      redirectUrl.searchParams.set("access_expires", String(Date.now() + expiresIn * 1000))
+    }
+    if (typeof refreshExpiresIn === "number") {
+      redirectUrl.searchParams.set("refresh_expires", String(Date.now() + refreshExpiresIn * 1000))
+    }
 
-    return Response.redirect(redirectUrl.toString())
+    // The refresh token is the long-lived, sensitive credential: keep it out of
+    // JS entirely by storing it in an HttpOnly cookie. `/github-refresh` reads it
+    // to mint fresh access tokens. SameSite=Lax blocks cross-site use (CSRF).
+    const headers = new Headers({ Location: redirectUrl.toString() })
+    if (refreshToken) {
+      headers.append("Set-Cookie", refreshCookie(refreshToken, refreshExpiresIn))
+    }
+    return new Response(null, { status: 302, headers })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error"
     return new Response(`Error: ${message}`, { status: 500 })

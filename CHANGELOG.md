@@ -4,6 +4,7 @@
 
 ### New
 
+- Your GitHub sign-in now stays connected. Access tokens are refreshed silently in the background, so sync no longer breaks every few hours and forces you to sign out and back in. When re-authentication genuinely is needed (after a long time away, or if you revoke access), the sidebar shows a clear, clickable **Sign in soon** / **Signed out** status instead of a generic "Sync error". The long-lived refresh token is kept in a secure, server-only cookie and never exposed to the page.
 - Past days in the calendar now show what you actually wrote that day, reconstructed from your Git history. It's a read-only view that merges every note you touched, with that day's note first — while today stays fully editable as before. Commit times are shown in your current timezone, and daily notes stay pinned to their date wherever in the world you open them.
 - Hovering a note in the sidebar now reveals a three-dots actions menu — pin, copy, rename, open in GitHub, or delete any note without opening it first. It's the same menu the open note uses, so the actions match everywhere.
 - Select several blocks at once with <kbd>⇧↑</kbd> / <kbd>⇧↓</kbd>, then indent, delete, copy, or cut them together.

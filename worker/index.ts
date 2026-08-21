@@ -9,6 +9,7 @@
 import type { Env } from "./types"
 import { corsProxy } from "./handlers/cors-proxy"
 import { githubAuth } from "./handlers/github-auth"
+import { githubRefresh } from "./handlers/github-refresh"
 import { fileProxy } from "./handlers/file-proxy"
 import { gitLfsFile } from "./handlers/git-lfs-file"
 import { share } from "./handlers/share"
@@ -19,6 +20,7 @@ export default {
 
     if (pathname.startsWith("/cors-proxy/")) return corsProxy(request)
     if (pathname === "/github-auth") return githubAuth(request, env)
+    if (pathname === "/github-refresh") return githubRefresh(request, env)
     if (pathname === "/file-proxy") return fileProxy(request)
     if (pathname === "/git-lfs-file") return gitLfsFile(request)
     if (pathname.startsWith("/share/")) return share(request, env)

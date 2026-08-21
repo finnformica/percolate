@@ -23,7 +23,8 @@ import {
 } from "./icons"
 import { NoteActionsMenu } from "./note-actions-menu"
 import { NoteFavicon } from "./note-favicon"
-import { SyncStatusIcon, useSyncStatusText } from "./sync-status"
+import { beginGitHubSignIn } from "./github-auth"
+import { SyncStatusIcon, useSyncStatusMeta, useSyncStatusText } from "./sync-status"
 
 const SizeContext = createContext<"medium" | "large">("medium")
 
@@ -36,6 +37,7 @@ export function NavItems({
 }) {
   const notes = useAtomValue(sortedNotesAtom)
   const syncText = useSyncStatusText()
+  const syncMeta = useSyncStatusMeta()
   const send = useSetAtom(globalStateMachineAtom)
   const { online } = useNetworkState()
   const { pathname } = useLocation()
@@ -168,7 +170,8 @@ export function NavItems({
             <button
               className="nav-item text-text-secondary"
               data-size={size}
-              onClick={() => send({ type: "SYNC" })}
+              title={syncMeta.tooltip}
+              onClick={() => (syncMeta.needsReauth ? beginGitHubSignIn() : send({ type: "SYNC" }))}
             >
               <SyncStatusIcon />
               {syncText}
