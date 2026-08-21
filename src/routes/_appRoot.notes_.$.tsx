@@ -218,15 +218,10 @@ function NotePage() {
     }
   }, [isSyncing])
 
-  // Ticks each time the note is saved. Passed to the block editor so it can
-  // collapse its local undo history at each commit (undo can't cross a save).
-  const [saveEpoch, setSaveEpoch] = useState(0)
-
   const requestSave = React.useCallback(() => {
     if (isSignedOut || !isDraft) return
     setPendingSave(true)
     handleSave(editorValue)
-    setSaveEpoch((epoch) => epoch + 1)
     window.setTimeout(() => setPendingSave(false), 4000)
   }, [isSignedOut, isDraft, handleSave, editorValue])
 
@@ -546,7 +541,6 @@ function NotePage() {
                   noteId={noteId}
                   value={editorValue}
                   onChange={setEditorValue}
-                  historyResetToken={saveEpoch}
                   startEditing={!note}
                   highlightHeading={highlightHeading}
                 />

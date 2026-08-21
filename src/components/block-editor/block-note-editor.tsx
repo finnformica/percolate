@@ -14,6 +14,23 @@ function withStarterBlock(doc: BlockDoc): BlockDoc {
 }
 
 /**
+ * Keep an empty block at the very bottom, so there's always somewhere to click
+ * and start typing (like Notion). No-op if the last root block is already an
+ * empty, childless block.
+ */
+function ensureTrailingBlank(doc: BlockDoc): BlockDoc {
+  const lastId = doc.rootBlockIds[doc.rootBlockIds.length - 1]
+  const last = lastId ? doc.blocks[lastId] : undefined
+  if (last && last.content === "" && last.children.length === 0) return doc
+  const block = emptyBlock()
+  return {
+    ...doc,
+    rootBlockIds: [...doc.rootBlockIds, block.id],
+    blocks: { ...doc.blocks, [block.id]: block },
+  }
+}
+
+/**
  * Adapts the block editor to the note page's string-based value model. The
  * note's markdown is parsed into blocks once (on mount); each edit serializes
  * back to markdown and calls `onChange`, so the surrounding page keeps its
@@ -23,7 +40,6 @@ export function BlockNoteEditor({
   value,
   onChange,
   noteId,
-  historyResetToken,
   startEditing,
   highlightHeading,
   readOnly = false,
@@ -36,8 +52,6 @@ export function BlockNoteEditor({
    * local state (e.g. Storybook / standalone usage).
    */
   noteId?: string
-  /** Changes on save; collapses the block editor's local undo history. */
-  historyResetToken?: unknown
   /** Start with the first block in edit mode (e.g. a brand-new note). */
   startEditing?: boolean
   /** Heading text to highlight/scroll to on landing (e.g. from Cmd-K). */
@@ -45,19 +59,24 @@ export function BlockNoteEditor({
   /** Display-only: render the note as read-only blocks (e.g. past-day history). */
   readOnly?: boolean
 }) {
-  const [doc, setDoc] = useState<BlockDoc>(() => withStarterBlock(parse(value)))
+  const [doc, setDoc] = useState<BlockDoc>(() => {
+    const parsed = withStarterBlock(parse(value))
+    // Read-only history views are shown verbatim; only editable notes get the
+    // always-present trailing blank.
+    return readOnly ? parsed : ensureTrailingBlank(parsed)
+  })
   const { collapsed, toggleCollapse } = useCollapseState(noteId)
 
   const handleChange = (next: BlockDoc) => {
-    setDoc(next)
-    onChange(serialize(next))
+    const withBlank = readOnly ? next : ensureTrailingBlank(next)
+    setDoc(withBlank)
+    onChange(serialize(withBlank))
   }
 
   return (
     <BlockEditor
       doc={doc}
       onChange={handleChange}
-      historyResetToken={historyResetToken}
       startEditing={startEditing}
       highlightHeading={highlightHeading}
       collapsed={noteId ? collapsed : undefined}

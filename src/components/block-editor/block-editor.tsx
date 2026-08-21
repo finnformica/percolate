@@ -2,17 +2,17 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import type { ClipboardEvent, KeyboardEvent } from "react"
 import type { BlockDoc } from "../../blocks/types"
 import { getBlockType, stripMarker } from "../../blocks/block-type"
-import { parse } from "../../blocks/parse"
 import {
-  emptyBlock,
-  indentBlock,
-  insertAfter,
-  insertBefore,
-  outdentBlock,
-  removeBlock,
-  spliceBlocks,
-  updateContent,
-} from "../../blocks/ops"
+  runCommand,
+  type CaretInput,
+  type CommandInput,
+  type CommandResult,
+  type FocusIntent,
+  type Mode,
+} from "../../blocks/commands"
+import { resolveKey, type KeyLike } from "../../blocks/keymap"
+import { parse } from "../../blocks/parse"
+import { spliceBlocks, updateContent } from "../../blocks/ops"
 import { BlockItem, type BlockEditorApi, type FocusRequest } from "./block-item"
 import { useBlockHistory } from "./use-block-history"
 
@@ -56,7 +56,6 @@ function findHeadingBlockId(doc: BlockDoc, heading: string): string | null {
 export function BlockEditor({
   doc,
   onChange,
-  historyResetToken,
   startEditing = false,
   highlightHeading,
   collapsed: collapsedProp,
@@ -65,8 +64,6 @@ export function BlockEditor({
 }: {
   doc: BlockDoc
   onChange: (doc: BlockDoc) => void
-  /** Changes when the note is saved, collapsing the local undo history. */
-  historyResetToken?: unknown
   /** Start with the first block in edit mode (e.g. a brand-new note). */
   startEditing?: boolean
   /** Highlight the block for this heading text on mount / when it changes. */
@@ -90,7 +87,7 @@ export function BlockEditor({
   )
   const [collapsedInternal, setCollapsedInternal] = useState<Set<string>>(new Set())
   const collapsed = collapsedProp ?? collapsedInternal
-  const history = useBlockHistory(onChange, historyResetToken)
+  const history = useBlockHistory(onChange)
 
   // Re-highlight when the target heading changes (Cmd-K into the open note).
   // Reads the latest doc via a ref so this only runs on heading changes.
@@ -151,6 +148,49 @@ export function BlockEditor({
     return true
   }
 
+  const toggleCollapse = (id: string) => {
+    if (onToggleCollapse) {
+      onToggleCollapse(id)
+      return
+    }
+    setCollapsedInternal((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  // Interpret a command's result: commit any doc change to history, toggle
+  // collapse, and move focus/selection where the command asked.
+  const applyFocus = (intent: FocusIntent) => {
+    if (intent.mode === "select") {
+      setFocus(null)
+      setSelected(intent.id)
+    } else {
+      setSelected(intent.id)
+      setFocus({ id: intent.id, atStart: intent.atStart, caret: intent.caret })
+    }
+  }
+  const applyResult = (result: CommandResult) => {
+    if (result.doc) history.commit(doc, result.doc, result.op ?? { type: "structural" })
+    if (result.toggleCollapse) toggleCollapse(result.toggleCollapse)
+    if (result.focus) applyFocus(result.focus)
+  }
+
+  // The single entry point every keyboard handler funnels through: resolve the
+  // event to a command via the keymap and run it. Touch/menu entry points would
+  // dispatch the same commands. Returns whether the gesture was consumed.
+  const dispatchKey = (mode: Mode, id: string, event: KeyLike, caret?: CaretInput): boolean => {
+    if (readOnly) return false
+    const input: CommandInput = { doc, id, mode, visibleOrder, caret }
+    const name = resolveKey(mode, event, input)
+    if (!name) return false
+    const result = runCommand(name, input)
+    applyResult(result)
+    return result.handled
+  }
+
   const api: BlockEditorApi = {
     focus,
     selected,
@@ -158,44 +198,10 @@ export function BlockEditor({
     readOnly,
     select,
     edit,
-    escapeEdit: (id) => select(id),
-    moveSelection: (id, direction) => {
-      const i = visibleOrder.indexOf(id)
-      if (i === -1) return
-      const next = direction === "up" ? i - 1 : i + 1
-      if (next >= 0 && next < visibleOrder.length) setSelected(visibleOrder[next])
-    },
-    toggleCollapse: (id) => {
-      if (onToggleCollapse) {
-        onToggleCollapse(id)
-        return
-      }
-      setCollapsedInternal((prev) => {
-        const next = new Set(prev)
-        if (next.has(id)) next.delete(id)
-        else next.add(id)
-        return next
-      })
-    },
+    toggleCollapse,
     setFocus,
     onContentChange: (id, content) =>
       history.commit(doc, updateContent(doc, id, content), { type: "text", blockId: id }),
-    onEnter: (id, initial = "") => {
-      const fresh = emptyBlock(initial)
-      history.commit(doc, insertAfter(doc, id, fresh), { type: "structural" })
-      edit(fresh.id)
-    },
-    onEnterBefore: (id, initial = "") => {
-      const fresh = emptyBlock(initial)
-      history.commit(doc, insertBefore(doc, id, fresh), { type: "structural" })
-      edit(fresh.id)
-    },
-    onSplit: (id, keepContent, newContent) => {
-      const fresh = emptyBlock(newContent)
-      const updated = updateContent(doc, id, keepContent)
-      history.commit(doc, insertAfter(updated, id, fresh), { type: "structural" })
-      edit(fresh.id, true)
-    },
     onPaste: (id, prefix, before, pasted, after) => {
       // Re-form the block's line with the pasted text spliced in at the caret,
       // then parse the whole thing so markdown prefixes and blank lines become
@@ -210,40 +216,30 @@ export function BlockEditor({
       setSelected(result.lastId)
       setFocus({ id: result.lastId, caret })
     },
-    onIndent: (id) => {
-      history.commit(doc, indentBlock(doc, id), { type: "structural" })
-      setFocus({ id })
-    },
-    onOutdent: (id) => {
-      history.commit(doc, outdentBlock(doc, id), { type: "structural" })
-      setFocus({ id })
-    },
-    onBackspaceEmpty: (id) => {
-      if (doc.rootBlockIds.length === 1 && doc.rootBlockIds[0] === id) return
-      const { doc: next, focusId } = removeBlock(doc, id)
-      history.commit(doc, next, { type: "structural" })
-      if (focusId) edit(focusId)
-    },
-    onArrowUp: (id) => {
-      const i = visibleOrder.indexOf(id)
-      if (i > 0) edit(visibleOrder[i - 1], false)
-    },
-    onArrowDown: (id) => {
-      const i = visibleOrder.indexOf(id)
-      if (i >= 0 && i < visibleOrder.length - 1) edit(visibleOrder[i + 1], true)
-    },
+    dispatchKey,
   }
 
-  // Cmd/Ctrl+Z undoes, Cmd/Ctrl+Shift+Z (or Ctrl+Y) redoes — at the document
-  // level, overriding the browser's per-textarea native undo so a single
-  // keystroke can walk back changes that spanned multiple blocks.
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (!(event.metaKey || event.ctrlKey)) return
-    const key = event.key.toLowerCase()
-    if (key === "z" && !event.shiftKey) {
-      if (undo()) event.preventDefault()
-    } else if ((key === "z" && event.shiftKey) || key === "y") {
-      if (redo()) event.preventDefault()
+    // Cmd/Ctrl+Z undoes, Cmd/Ctrl+Shift+Z (or Ctrl+Y) redoes — at the document
+    // level, overriding the browser's per-textarea native undo so a single
+    // keystroke can walk back changes that spanned multiple blocks.
+    if (event.metaKey || event.ctrlKey) {
+      const key = event.key.toLowerCase()
+      if (key === "z" && !event.shiftKey) {
+        if (undo()) event.preventDefault()
+      } else if ((key === "z" && event.shiftKey) || key === "y") {
+        if (redo()) event.preventDefault()
+      }
+      return
+    }
+    // Safety net: when a block is highlighted but its element has lost DOM focus,
+    // arrow / space keys would scroll the page instead of moving the highlight.
+    // If the block's own handler didn't already consume the event, run the
+    // select-mode command here (which also re-focuses the block).
+    if (!focus && selected && !event.defaultPrevented) {
+      if (event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === " ") {
+        if (dispatchKey("select", selected, event)) event.preventDefault()
+      }
     }
   }
 

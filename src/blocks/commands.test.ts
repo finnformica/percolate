@@ -1,0 +1,253 @@
+import { describe, expect, it } from "vitest"
+import { runCommand, type CaretInput, type CommandInput, type Mode } from "./commands"
+import type { BlockDoc } from "./types"
+
+/**
+ * A small fixture:
+ *   - a  "A"
+ *   - b  "B"
+ *     - b1 "B1"
+ *   - c  "C"
+ */
+function fixture(): BlockDoc {
+  return {
+    frontmatter: null,
+    rootBlockIds: ["a", "b", "c"],
+    blocks: {
+      a: { id: "a", content: "A", children: [] },
+      b: { id: "b", content: "B", children: ["b1"] },
+      b1: { id: "b1", content: "B1", children: [] },
+      c: { id: "c", content: "C", children: [] },
+    },
+  }
+}
+
+function input(
+  doc: BlockDoc,
+  id: string,
+  over: Partial<Omit<CommandInput, "doc" | "id">> = {},
+): CommandInput {
+  return { doc, id, mode: "select", visibleOrder: ["a", "b", "b1", "c"], ...over }
+}
+
+function caret(value: string, start: number, end = start, lines = {}): CaretInput {
+  return { value, start, end, atFirstLine: false, atLastLine: false, ...lines }
+}
+
+/** The id present in `after` but not `before` (a freshly minted block). */
+function newBlockId(before: BlockDoc, after: BlockDoc): string {
+  const id = Object.keys(after.blocks).find((k) => !(k in before.blocks))
+  if (!id) throw new Error("no new block")
+  return id
+}
+
+describe("indent / outdent", () => {
+  it("indents a block under its previous sibling, keeping select focus", () => {
+    const doc = fixture()
+    const result = runCommand("indent", input(doc, "c", { mode: "select" }))
+    expect(result.handled).toBe(true)
+    expect(result.doc!.blocks.b.children).toEqual(["b1", "c"])
+    expect(result.doc!.rootBlockIds).toEqual(["a", "b"])
+    expect(result.focus).toEqual({ mode: "select", id: "c" })
+  })
+
+  it("keeps edit focus when indenting in edit mode", () => {
+    const doc = fixture()
+    const result = runCommand("indent", input(doc, "c", { mode: "edit" }))
+    expect(result.focus).toEqual({ mode: "edit", id: "c" })
+  })
+
+  it("consumes the key but does nothing when it cannot indent", () => {
+    const doc = fixture()
+    const result = runCommand("indent", input(doc, "a"))
+    expect(result.handled).toBe(true)
+    expect(result.doc).toBeUndefined()
+  })
+
+  it("outdents a nested block to sibling of its parent", () => {
+    const doc = fixture()
+    const result = runCommand("outdent", input(doc, "b1", { mode: "select" }))
+    expect(result.doc!.blocks.b.children).toEqual([])
+    expect(result.doc!.rootBlockIds).toEqual(["a", "b", "b1", "c"])
+  })
+})
+
+describe("selection movement", () => {
+  it("moves the highlight down the visible order", () => {
+    const doc = fixture()
+    const result = runCommand("moveSelectionDown", input(doc, "b"))
+    expect(result.focus).toEqual({ mode: "select", id: "b1" })
+  })
+
+  it("consumes the key at the ends without moving (so the page never scrolls)", () => {
+    const doc = fixture()
+    const result = runCommand("moveSelectionUp", input(doc, "a"))
+    expect(result.handled).toBe(true)
+    expect(result.focus).toBeUndefined()
+  })
+
+  it("moves edit focus to the neighbour, caret at end going up / start going down", () => {
+    const doc = fixture()
+    expect(runCommand("moveEditFocusUp", input(doc, "b", { mode: "edit" })).focus).toEqual({
+      mode: "edit",
+      id: "a",
+    })
+    expect(runCommand("moveEditFocusDown", input(doc, "b", { mode: "edit" })).focus).toEqual({
+      mode: "edit",
+      id: "b1",
+      atStart: true,
+    })
+  })
+})
+
+describe("deleteBlock", () => {
+  it("removes a block and highlights the previous sibling", () => {
+    const doc = fixture()
+    const result = runCommand("deleteBlock", input(doc, "c"))
+    expect(result.doc!.blocks.c).toBeUndefined()
+    expect(result.doc!.rootBlockIds).toEqual(["a", "b"])
+    expect(result.focus).toEqual({ mode: "select", id: "b" })
+  })
+
+  it("refuses to delete the only block", () => {
+    const doc: BlockDoc = {
+      frontmatter: null,
+      rootBlockIds: ["only"],
+      blocks: { only: { id: "only", content: "", children: [] } },
+    }
+    const result = runCommand("deleteBlock", input(doc, "only", { visibleOrder: ["only"] }))
+    expect(result.handled).toBe(true)
+    expect(result.doc).toBeUndefined()
+  })
+})
+
+describe("toggleTodo", () => {
+  it("checks an unchecked todo", () => {
+    const doc: BlockDoc = {
+      frontmatter: null,
+      rootBlockIds: ["t"],
+      blocks: { t: { id: "t", content: "[ ] task", children: [] } },
+    }
+    const result = runCommand("toggleTodo", input(doc, "t", { visibleOrder: ["t"] }))
+    expect(result.doc!.blocks.t.content).toBe("[x] task")
+  })
+
+  it("ignores non-todo blocks", () => {
+    const doc = fixture()
+    expect(runCommand("toggleTodo", input(doc, "a")).handled).toBe(false)
+  })
+})
+
+describe("toggleCollapse", () => {
+  it("requests a toggle for a block with children", () => {
+    const doc = fixture()
+    expect(runCommand("toggleCollapse", input(doc, "b")).toggleCollapse).toBe("b")
+  })
+
+  it("consumes the key but toggles nothing for a leaf (space must never scroll)", () => {
+    const doc = fixture()
+    const result = runCommand("toggleCollapse", input(doc, "a"))
+    expect(result.handled).toBe(true)
+    expect(result.toggleCollapse).toBeUndefined()
+  })
+})
+
+describe("insertBelow", () => {
+  it("adds an unordered-list continuation block by default", () => {
+    const doc = fixture()
+    const result = runCommand("insertBelow", input(doc, "a", { mode: "edit" }))
+    const id = newBlockId(doc, result.doc!)
+    expect(result.doc!.blocks[id].content).toBe("- ")
+    expect(result.doc!.rootBlockIds).toEqual(["a", id, "b", "c"])
+    expect(result.focus).toEqual({ mode: "edit", id })
+  })
+
+  it("nests the new block under a heading", () => {
+    const doc: BlockDoc = {
+      frontmatter: null,
+      rootBlockIds: ["h"],
+      blocks: { h: { id: "h", content: "# Title", children: [] } },
+    }
+    const result = runCommand("insertBelow", input(doc, "h", { mode: "edit", visibleOrder: ["h"] }))
+    const id = newBlockId(doc, result.doc!)
+    expect(result.doc!.rootBlockIds).toEqual(["h"])
+    expect(result.doc!.blocks.h.children).toEqual([id])
+    expect(result.doc!.blocks[id].content).toBe("- ")
+  })
+})
+
+describe("split", () => {
+  it("splits a list item at the caret, continuing the marker", () => {
+    const doc: BlockDoc = {
+      frontmatter: null,
+      rootBlockIds: ["x"],
+      blocks: { x: { id: "x", content: "- hello", children: [] } },
+    }
+    const result = runCommand(
+      "splitContinuingList",
+      input(doc, "x", { mode: "edit", visibleOrder: ["x"], caret: caret("hello", 2) }),
+    )
+    const id = newBlockId(doc, result.doc!)
+    expect(result.doc!.blocks.x.content).toBe("- he")
+    expect(result.doc!.blocks[id].content).toBe("- llo")
+    expect(result.focus).toEqual({ mode: "edit", id, atStart: true })
+  })
+
+  it("shift-enter splits into a plain paragraph (no marker carried)", () => {
+    const doc: BlockDoc = {
+      frontmatter: null,
+      rootBlockIds: ["x"],
+      blocks: { x: { id: "x", content: "- hello", children: [] } },
+    }
+    const result = runCommand(
+      "splitPlain",
+      input(doc, "x", { mode: "edit", visibleOrder: ["x"], caret: caret("hello", 2) }),
+    )
+    const id = newBlockId(doc, result.doc!)
+    expect(result.doc!.blocks.x.content).toBe("- he")
+    expect(result.doc!.blocks[id].content).toBe("llo")
+  })
+})
+
+describe("marker editing", () => {
+  it("exitList clears an empty list item to a paragraph", () => {
+    const doc: BlockDoc = {
+      frontmatter: null,
+      rootBlockIds: ["x"],
+      blocks: { x: { id: "x", content: "- ", children: [] } },
+    }
+    const result = runCommand("exitList", input(doc, "x", { mode: "edit", visibleOrder: ["x"] }))
+    expect(result.doc!.blocks.x.content).toBe("")
+  })
+
+  it("stripMarker removes the leading marker", () => {
+    const doc: BlockDoc = {
+      frontmatter: null,
+      rootBlockIds: ["x"],
+      blocks: { x: { id: "x", content: "# Heading", children: [] } },
+    }
+    const result = runCommand("stripMarker", input(doc, "x", { mode: "edit", visibleOrder: ["x"] }))
+    expect(result.doc!.blocks.x.content).toBe("Heading")
+    expect(result.focus).toEqual({ mode: "edit", id: "x", atStart: true })
+  })
+
+  it("backspaceEmpty removes an empty block and edits the previous one", () => {
+    const doc = fixture()
+    const result = runCommand("backspaceEmpty", input(doc, "c", { mode: "edit" }))
+    expect(result.doc!.blocks.c).toBeUndefined()
+    // removeBlock hands focus to the previous *sibling* (b), not b1.
+    expect(result.focus).toEqual({ mode: "edit", id: "b" })
+  })
+})
+
+describe("mode toggles", () => {
+  const doc = fixture()
+  const cases: [Parameters<typeof runCommand>[0], Mode, Mode][] = [
+    ["enterEdit", "select", "edit"],
+    ["exitEdit", "edit", "select"],
+  ]
+  it.each(cases)("%s focuses %s → %s", (name, from, to) => {
+    const result = runCommand(name, input(doc, "a", { mode: from }))
+    expect(result.focus).toEqual({ mode: to, id: "a" })
+  })
+})

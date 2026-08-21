@@ -9,6 +9,8 @@ import {
   toggleTodo,
   type BlockType,
 } from "../../blocks/block-type"
+import type { CaretInput, Mode } from "../../blocks/commands"
+import type { KeyLike } from "../../blocks/keymap"
 import { IconButton } from "../icon-button"
 import { BlockContent } from "./block-content"
 import { caretLineFlags } from "./caret"
@@ -31,40 +33,33 @@ export interface BlockEditorApi {
   select: (id: string) => void
   /** Enter edit mode for a block. */
   edit: (id: string, atStart?: boolean) => void
-  /** Leave edit mode and re-highlight the block. */
-  escapeEdit: (id: string) => void
-  /** Move the highlight to the previous/next visible block. */
-  moveSelection: (id: string, direction: "up" | "down") => void
   toggleCollapse: (id: string) => void
   setFocus: (focus: FocusRequest | null) => void
   onContentChange: (id: string, content: string) => void
-  /** Insert a new block after `id`, optionally pre-filled (e.g. a list marker). */
-  onEnter: (id: string, initial?: string) => void
-  /** Insert a new block before `id`, optionally pre-filled (e.g. a list marker). */
-  onEnterBefore: (id: string, initial?: string) => void
-  /** Split `id`: keep `keepContent`, move the rest into a new block after it. */
-  onSplit: (id: string, keepContent: string, newContent: string) => void
   /** Replace `id` with blocks parsed from pasted markdown, placing the caret. */
   onPaste: (id: string, prefix: string, before: string, pasted: string, after: string) => void
-  onIndent: (id: string) => void
-  onOutdent: (id: string) => void
-  onBackspaceEmpty: (id: string) => void
-  /** While editing, move edit focus to the previous/next block. */
-  onArrowUp: (id: string) => void
-  onArrowDown: (id: string) => void
+  /**
+   * Resolve a key event to an editor command (via the keymap) and run it.
+   * Every keyboard interaction funnels through here; returns whether the event
+   * was consumed (so the caller can `preventDefault`).
+   */
+  dispatchKey: (mode: Mode, id: string, event: KeyLike, caret?: CaretInput) => boolean
 }
 
-/** The marker a new sibling block should carry to continue a list. */
-function continuationMarker(type: BlockType): string {
-  switch (type.kind) {
-    case "bullet":
-      return "- "
-    case "todo":
-      return "[ ] "
-    case "ordered":
-      return `${type.number + 1}. `
+/** Extra space above a heading, proportional to its level, so sections breathe.
+ * Applied to the block's outer wrapper (shared by view and edit) so switching
+ * modes never shifts the text. */
+function headingTopMargin(type: BlockType): string {
+  if (type.kind !== "heading") return ""
+  switch (type.level) {
+    case 1:
+      return "mt-6"
+    case 2:
+      return "mt-5"
+    case 3:
+      return "mt-4"
     default:
-      return ""
+      return "mt-3"
   }
 }
 
@@ -174,62 +169,20 @@ export function BlockItem({
   }
 
   const handleEditKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && event.shiftKey) {
-      // Shift-Enter inserts a fresh block *above* the current one (same list
-      // style), rather than a soft line break — the file format is one block
-      // per line, so in-block newlines aren't representable anyway.
-      event.preventDefault()
-      api.onEnterBefore(block.id, continuationMarker(type))
-    } else if (event.key === "Enter") {
-      event.preventDefault()
-      const el = event.currentTarget
-      const isList = type.kind === "bullet" || type.kind === "todo" || type.kind === "ordered"
-      const beforeBody = el.value.slice(0, el.selectionStart)
-      const afterBody = el.value.slice(el.selectionEnd)
-      const hasSelection = el.selectionStart !== el.selectionEnd
-      if (isList && body.trim() === "") {
-        // Enter on an empty list item exits the list (becomes a paragraph).
-        api.onContentChange(block.id, "")
-      } else if (!hasSelection && afterBody === "") {
-        // Caret at the end — just start a fresh block.
-        api.onEnter(block.id, continuationMarker(type))
-      } else {
-        // Caret mid-line (or a selection): keep the text before the caret and
-        // move the text after it into the new block, continuing the list style.
-        api.onSplit(block.id, prefix + beforeBody, continuationMarker(type) + afterBody)
-      }
-    } else if (event.key === "Escape") {
-      event.preventDefault()
-      api.escapeEdit(block.id)
-    } else if (event.key === "Tab") {
-      event.preventDefault()
-      if (event.shiftKey) api.onOutdent(block.id)
-      else api.onIndent(block.id)
-    } else if (event.key === "Backspace") {
-      const el = event.currentTarget
-      if (el.selectionStart === 0 && el.selectionEnd === 0) {
-        if (prefix !== "") {
-          // Backspace at the start strips the block's marker (→ paragraph).
-          event.preventDefault()
-          api.onContentChange(block.id, body)
-        } else if (body === "") {
-          event.preventDefault()
-          api.onBackspaceEmpty(block.id)
-        }
-      }
-    } else if (event.key === "ArrowUp" && !event.shiftKey && !event.metaKey && !event.altKey) {
-      // Only leave the block when the caret is on its first *visual* line —
-      // otherwise let the textarea move the caret up within a wrapped block.
-      if (caretLineFlags(event.currentTarget).atFirst) {
-        event.preventDefault()
-        api.onArrowUp(block.id)
-      }
-    } else if (event.key === "ArrowDown" && !event.shiftKey && !event.metaKey && !event.altKey) {
-      if (caretLineFlags(event.currentTarget).atLast) {
-        event.preventDefault()
-        api.onArrowDown(block.id)
-      }
+    const el = event.currentTarget
+    // Line geometry is only needed to decide whether an arrow leaves the block,
+    // and measuring it mirrors the textarea into the DOM — so skip it for every
+    // other key.
+    const isArrow = event.key === "ArrowUp" || event.key === "ArrowDown"
+    const flags = isArrow ? caretLineFlags(el) : { atFirst: false, atLast: false }
+    const caret: CaretInput = {
+      value: el.value,
+      start: el.selectionStart,
+      end: el.selectionEnd,
+      atFirstLine: flags.atFirst,
+      atLastLine: flags.atLast,
     }
+    if (api.dispatchKey("edit", block.id, event, caret)) event.preventDefault()
   }
 
   const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
@@ -246,24 +199,7 @@ export function BlockItem({
   }
 
   const handleSelectKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Enter") {
-      event.preventDefault()
-      api.edit(block.id)
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault()
-      api.moveSelection(block.id, "up")
-    } else if (event.key === "ArrowDown") {
-      event.preventDefault()
-      api.moveSelection(block.id, "down")
-    } else if ((event.key === "x" || event.key === "X") && type.kind === "todo") {
-      // Toggle a todo's checkbox from select mode.
-      event.preventDefault()
-      api.onContentChange(block.id, toggleTodo(block.content))
-    } else if (event.key === " " && hasChildren) {
-      // Collapse/expand a block with children from select mode.
-      event.preventDefault()
-      api.toggleCollapse(block.id)
-    }
+    if (api.dispatchKey("select", block.id, event)) event.preventDefault()
   }
 
   const marker =
@@ -292,7 +228,7 @@ export function BlockItem({
     ) : null
 
   return (
-    <div>
+    <div className={cx(headingTopMargin(type))}>
       <div className="group relative flex items-start gap-1">
         <IconButton
           aria-label={isCollapsed ? "Expand" : "Collapse"}
@@ -301,7 +237,12 @@ export function BlockItem({
           tabIndex={-1}
           onClick={() => api.toggleCollapse(block.id)}
           className={cx(
-            "mt-0.5 w-6 shrink-0 text-text-tertiary",
+            // Match the block's typography so the toggle scales with the text
+            // and centres on the first line (a big heading gets a taller,
+            // aligned toggle instead of a small one stuck at the top).
+            "h-[1lh] w-6 shrink-0 font-content leading-relaxed",
+            typo,
+            "text-text-tertiary",
             !hasChildren && "pointer-events-none opacity-0",
           )}
         >
