@@ -194,20 +194,68 @@ export function toWeekString(date: Date) {
 }
 
 /**
- * The UTC instant range `[since, until)` that a calendar date covers in the
- * current device timezone. Used to bucket git commits — which are absolute
- * instants — into the day a `YYYY-MM-DD` refers to, matching how the calendar
- * labels days ("timed events shown in your current timezone").
+ * The offset (ms) of an IANA timezone from UTC at a given instant, defined as
+ * `zoneWallClock - actualUTC` (positive east of UTC). Uses `Intl` so it is
+ * correct across DST for any zone, not just the host's.
+ */
+function zoneOffsetMs(timeZone: string, date: Date): number {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  })
+  const parts: Record<string, number> = {}
+  for (const part of dtf.formatToParts(date)) {
+    if (part.type !== "literal") parts[part.type] = Number(part.value)
+  }
+  const asUtc = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second,
+  )
+  return asUtc - date.getTime()
+}
+
+/** The UTC instant of local midnight (start of `year-month-day`) in `timeZone`. */
+function zonedDayStartUtc(year: number, month: number, day: number, timeZone: string): Date {
+  // Treat the wall-clock midnight as if it were UTC, then correct by the zone's
+  // offset. A second pass handles the rare case where the guess and the
+  // corrected instant straddle a DST change with different offsets.
+  const guess = Date.UTC(year, month - 1, day, 0, 0, 0)
+  const offset = zoneOffsetMs(timeZone, new Date(guess))
+  let instant = guess - offset
+  const corrected = zoneOffsetMs(timeZone, new Date(instant))
+  if (corrected !== offset) instant = guess - corrected
+  return new Date(instant)
+}
+
+/**
+ * The UTC instant range `[since, until)` that a calendar date covers in a given
+ * timezone (defaulting to the device's). Used to bucket git commits — which are
+ * absolute instants — into the day a `YYYY-MM-DD` refers to, matching how the
+ * calendar labels days ("timed events shown in your current timezone").
  *
- * `new Date(y, m, d)` constructs local midnight as an absolute instant, so
- * `.toISOString()` yields the correct UTC boundary, DST shifts included.
+ * The explicit `timeZone` parameter makes this deterministic to test and lets a
+ * future "home timezone" setting bucket days consistently across devices.
  * Expects a valid `YYYY-MM-DD` string.
  */
-export function getDayRangeUtc(dateString: string): { since: string; until: string } {
+export function getDayRangeUtc(
+  dateString: string,
+  timeZone: string = Intl.DateTimeFormat().resolvedOptions().timeZone,
+): { since: string; until: string } {
   const [year, month, day] = dateString.split("-").map(Number)
-  const start = new Date(year, month - 1, day, 0, 0, 0, 0)
-  const end = new Date(year, month - 1, day + 1, 0, 0, 0, 0)
-  return { since: start.toISOString(), until: end.toISOString() }
+  const since = zonedDayStartUtc(year, month, day, timeZone)
+  // `day + 1` overflows the month; Date.UTC normalizes it to the next day.
+  const until = zonedDayStartUtc(year, month, day + 1, timeZone)
+  return { since: since.toISOString(), until: until.toISOString() }
 }
 
 /**
