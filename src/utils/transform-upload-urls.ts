@@ -3,7 +3,7 @@ import { fromMarkdown } from "mdast-util-from-markdown"
 import { visit } from "unist-util-visit"
 import { parseFrontmatter, updateFrontmatterValue } from "./frontmatter"
 
-// Matches UPLOADS_DIR in src/hooks/attach-file.ts
+// Matches UPLOADS_DIR in src/utils/uploads.ts
 // Duplicated here to avoid importing browser-specific code in this utility
 const UPLOADS_DIR = "/uploads"
 

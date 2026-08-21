@@ -1,12 +1,7 @@
 import LightningFS from "@isomorphic-git/lightning-fs"
 import mime from "mime"
 import { GitHubRepository, GitHubUser } from "../schema"
-import {
-  createGitLfsPointer,
-  isTrackedWithGitLfs,
-  resolveGitLfsPointer,
-  uploadToGitLfsServer,
-} from "./git-lfs"
+import { isTrackedWithGitLfs, resolveGitLfsPointer } from "./git-lfs"
 
 const DB_NAME = "fs"
 
@@ -53,29 +48,5 @@ export async function getFileUrl({
     return await resolveGitLfsPointer({ file, githubUser, githubRepo })
   } else {
     return URL.createObjectURL(file)
-  }
-}
-
-/** Write a file to the file system and handle Git LFS automatically if needed */
-export async function writeFile({
-  path,
-  content,
-  githubUser,
-  githubRepo,
-}: {
-  path: string
-  content: ArrayBuffer
-  githubUser: GitHubUser
-  githubRepo: GitHubRepository
-}) {
-  if (await isTrackedWithGitLfs(path)) {
-    await uploadToGitLfsServer({ content, githubUser, githubRepo })
-
-    // Write a Git LFS pointer to the file system
-    const pointer = await createGitLfsPointer(content)
-    await fs.promises.writeFile(path, pointer)
-  } else {
-    // TODO: Test this
-    await fs.promises.writeFile(path, Buffer.from(content))
   }
 }

@@ -13,7 +13,6 @@ import {
 import { Checkbox } from "./checkbox"
 import { DateLink } from "./date-link"
 import { Markdown } from "./markdown"
-import { NoteEditor } from "./note-editor"
 import { withOrdinalSuffix } from "../utils/pluralize"
 import { TagLink } from "./tag-link"
 
@@ -271,15 +270,14 @@ export function PropertyValueEditor({
               }
             }}
           >
-            <NoteEditor
+            <input
+              type="text"
               defaultValue={String(value)}
-              placeholder=""
               // eslint-disable-next-line jsx-a11y/no-autofocus
-              autoFocus={true}
-              className="px-2 py-0.5 coarse:px-3 coarse:py-1.5"
-              indentWithTab={false}
-              onChange={(text) => {
-                const parsed = parsePrimitiveFromString(text)
+              autoFocus
+              className="w-full border-none bg-transparent px-2 py-0.5 font-content leading-7 text-text outline-none coarse:px-3 coarse:py-1.5"
+              onChange={(event) => {
+                const parsed = parsePrimitiveFromString(event.target.value)
                 onChange(parsed)
               }}
             />

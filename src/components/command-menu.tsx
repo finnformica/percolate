@@ -173,20 +173,6 @@ export function CommandMenu() {
   const noteActions = useMemo(() => {
     if (!note) return []
     return [
-      // TODO: Get the codemirror instance and update the editor value when pinning/unpinning
-      // {
-      //   label: note.pinned ? "Unpin note" : "Pin note",
-      //   icon: note.pinned ? <PinFillIcon16 className="text-text-pinned" /> : <PinIcon16 />,
-      //   onSelect: () => {
-      //     saveNote({
-      //       id: note.id,
-      //       content: updateFrontmatter({
-      //         content: note.content,
-      //         properties: { pinned: note.pinned ? null : true },
-      //       }),
-      //     })
-      //   },
-      // },
       {
         label: "Copy note markdown",
         icon: <CopyIcon16 />,
