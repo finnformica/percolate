@@ -4,7 +4,7 @@ import React from "react"
 import { useNetworkState } from "react-use"
 import { githubRepoAtom, githubUserAtom } from "../global-state"
 import { getDayRangeUtc } from "../utils/date"
-import { DayActivity, DayCommit, GhFile, filesToChangedNotes } from "./history-parse"
+import { DayActivity, GhFile, filesToChangedNotes } from "./history-parse"
 
 /**
  * Fetch the net note activity for one calendar day from GitHub — "what was
@@ -36,22 +36,8 @@ async function fetchDayActivity(params: {
 
   // Nothing committed by the end of the day, or no commits during the day.
   if (!head || (base && head.sha === base.sha)) {
-    return { notes: [], commits: [] }
+    return { notes: [] }
   }
-
-  // The day's commits, for the timeline (display-only; capped at 100).
-  const listRes = await gh("GET /repos/{owner}/{repo}/commits", {
-    owner,
-    repo,
-    since,
-    until,
-    per_page: 100,
-  })
-  const commits: DayCommit[] = listRes.data.map((commit) => ({
-    sha: commit.sha,
-    message: commit.commit.message,
-    date: commit.commit.author?.date ?? commit.commit.committer?.date ?? "",
-  }))
 
   // Net change across the day: base..head. On the repo's genesis day (no
   // earlier commit) fall back to the head commit's own diff — a documented
@@ -73,7 +59,7 @@ async function fetchDayActivity(params: {
     files = (detailRes.data.files ?? []) as GhFile[]
   }
 
-  return { notes: filesToChangedNotes(files), commits }
+  return { notes: filesToChangedNotes(files) }
 }
 
 // In-memory cache keyed by repo + date. Past days are immutable, so entries
@@ -88,7 +74,7 @@ export type DayActivityState =
   | { status: "error"; message: string }
 
 function toState(data: DayActivity): DayActivityState {
-  return data.commits.length === 0 ? { status: "empty" } : { status: "ready", data }
+  return data.notes.length === 0 ? { status: "empty" } : { status: "ready", data }
 }
 
 /**

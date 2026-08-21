@@ -23,18 +23,9 @@ export type ChangedNote = {
   patch?: string
 }
 
-/** A commit made on the day, for the timeline. */
-export type DayCommit = {
-  sha: string
-  message: string
-  /** Absolute ISO instant (author date). */
-  date: string
-}
-
-/** The reconstructed activity for a single calendar day. */
+/** The reconstructed activity for a single calendar day: what was written. */
 export type DayActivity = {
   notes: ChangedNote[]
-  commits: DayCommit[]
 }
 
 /**

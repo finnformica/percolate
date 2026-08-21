@@ -1,7 +1,6 @@
 import React from "react"
 import { useDayActivity } from "../data/history"
-import type { ChangedNote, DayCommit } from "../data/history-parse"
-import { formatTimeOfDay } from "../utils/date"
+import type { ChangedNote } from "../data/history-parse"
 import { BlockNoteEditor } from "./block-editor/block-note-editor"
 import { LoadingIcon16 } from "./icons"
 import { NoteLink } from "./note-link"
@@ -10,9 +9,10 @@ import { NoteLink } from "./note-link"
 const noop = () => {}
 
 /**
- * Read-only "what was written that day" view for a past calendar date,
- * reconstructed from git history via GitHub. Rendered instead of the editable
- * daily note when the date is not today.
+ * Read-only "what was written that day" view for a past calendar date: a
+ * roll-up of every note touched that day, reconstructed from git history via
+ * GitHub. Rendered instead of the editable daily note when the date is not
+ * today.
  */
 export function DayActivity({ date }: { date: string }) {
   const state = useDayActivity(date)
@@ -38,11 +38,9 @@ export function DayActivity({ date }: { date: string }) {
     return <Message>Nothing was written on this day.</Message>
   }
 
-  const { notes, commits } = state.data
-
   // The daily note for this date reads like a journal, so surface it first;
   // everything else follows in the order GitHub returned.
-  const sortedNotes = [...notes].sort((a, b) => {
+  const sortedNotes = [...state.data.notes].sort((a, b) => {
     if (a.noteId === date) return -1
     if (b.noteId === date) return 1
     return 0
@@ -50,12 +48,9 @@ export function DayActivity({ date }: { date: string }) {
 
   return (
     <div className="flex flex-col gap-8">
-      {sortedNotes.length === 0 ? (
-        <Message>Nothing was written on this day.</Message>
-      ) : (
-        sortedNotes.map((note) => <ChangedNoteSection key={note.noteId} note={note} />)
-      )}
-      {commits.length > 0 ? <CommitTimeline commits={commits} /> : null}
+      {sortedNotes.map((note) => (
+        <ChangedNoteSection key={note.noteId} note={note} />
+      ))}
     </div>
   )
 }
@@ -75,24 +70,6 @@ function ChangedNoteSection({ note }: { note: ChangedNote }) {
   )
 }
 
-function CommitTimeline({ commits }: { commits: DayCommit[] }) {
-  return (
-    <section className="flex flex-col gap-2 border-t border-border-secondary pt-4">
-      <h2 className="text-sm font-bold text-text-secondary">
-        {commits.length} {commits.length === 1 ? "change" : "changes"} this day
-      </h2>
-      <ul className="flex flex-col gap-1">
-        {commits.map((commit) => (
-          <li key={commit.sha} className="flex gap-3 text-sm text-text-secondary">
-            <span className="tabular-nums">{commit.date ? formatTimeOfDay(commit.date) : ""}</span>
-            <span className="truncate">{firstLine(commit.message)}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  )
-}
-
 function Message({ children }: { children: React.ReactNode }) {
   return <p className="text-text-secondary">{children}</p>
 }
@@ -106,8 +83,4 @@ function statusLabel(status: string): string {
     default:
       return "Changed this day"
   }
-}
-
-function firstLine(message: string): string {
-  return message.split("\n")[0]
 }
