@@ -921,7 +921,6 @@ function NoteEmbed({ id }: NoteEmbedProps) {
           to="/notes/$"
           params={{ _splat: id }}
           search={{
-            mode: "read",
             query: undefined,
           }}
         >

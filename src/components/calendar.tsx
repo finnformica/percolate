@@ -13,7 +13,7 @@ import {
 } from "date-fns"
 import { useAtom } from "jotai"
 import React from "react"
-import { Link, useSearch } from "@tanstack/react-router"
+import { Link } from "@tanstack/react-router"
 import { calendarLayoutAtom } from "../global-state"
 import { useBacklinksForId, useNoteById } from "../hooks/note"
 import { Note } from "../schema"
@@ -321,14 +321,11 @@ function CalendarItem({
   anchor,
   sideOffset = 8,
 }: CalendarItemProps) {
-  const searchParams = useSearch({ strict: false })
-
   const link = (
     <Link
       to="/notes/$"
       params={{ _splat: id }}
       search={{
-        mode: searchParams.mode ?? "read",
         query: undefined,
       }}
       aria-label={ariaLabel}
@@ -446,7 +443,6 @@ function MonthWeekRow({
     return eachDayOfInterval({ start: mondayOfWeek, end: endOfWeek })
   }, [mondayOfWeek])
 
-  const searchParams = useSearch({ strict: false })
   const isWeekActive = weekString === activeNoteId
   const anchorRef = React.useContext(CalendarContainerContext)
 
@@ -477,7 +473,6 @@ function MonthWeekRow({
       to="/notes/$"
       params={{ _splat: weekString }}
       search={{
-        mode: searchParams.mode ?? "read",
         query: undefined,
       }}
       aria-label={label}
@@ -551,7 +546,6 @@ function MonthDateCell({
   const year = date.getFullYear()
   const label = `${dayName}, ${monthName} ${day}, ${year}`
   const isToday = dateString === toDateString(new Date())
-  const searchParams = useSearch({ strict: false })
   const anchorRef = React.useContext(CalendarContainerContext)
 
   // Create note object for hover card (fallback if note doesn't exist)
@@ -581,7 +575,6 @@ function MonthDateCell({
       to="/notes/$"
       params={{ _splat: dateString }}
       search={{
-        mode: searchParams.mode ?? "read",
         query: undefined,
       }}
       aria-label={label}

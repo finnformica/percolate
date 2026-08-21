@@ -57,7 +57,6 @@ export function NavBar() {
               to: "/notes/$",
               params: { _splat: generateNoteId() },
               search: {
-                mode: "write",
                 query: undefined,
               },
             })

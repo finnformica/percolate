@@ -3,7 +3,6 @@ import { parseDate } from "chrono-node"
 import { Command } from "cmdk"
 import copy from "copy-to-clipboard"
 import { atom, useAtom, useAtomValue } from "jotai"
-import { selectAtom, useAtomCallback } from "jotai/utils"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { useHotkeys } from "react-hotkeys-hook"
 import { useDebounce } from "use-debounce"
@@ -32,8 +31,6 @@ import { NoteFavicon } from "./note-favicon"
 
 export const isCommandMenuOpenAtom = atom(false)
 
-const hasDailyNoteAtom = selectAtom(notesAtom, (notes) => notes.has(toDateString(new Date())))
-
 export function CommandMenu() {
   const navigate = useNavigate()
   const githubRepo = useAtomValue(githubRepoAtom)
@@ -42,7 +39,6 @@ export function CommandMenu() {
   const saveNote = useSaveNote()
   const notes = useAtomValue(notesAtom)
   const pinnedNotes = useAtomValue(pinnedNotesAtom)
-  const getHasDailyNote = useAtomCallback(useCallback((get) => get(hasDailyNoteAtom), []))
   const [isOpen, setIsOpen] = useAtom(isCommandMenuOpenAtom)
 
   // Get the current note if we're on a note page.
@@ -97,7 +93,7 @@ export function CommandMenu() {
       navigate({
         to: "/notes/$",
         params: { _splat: id },
-        search: { mode: "read", query: undefined, heading },
+        search: { query: undefined, heading },
       })
     },
     [setIsOpen, navigate],
@@ -133,7 +129,6 @@ export function CommandMenu() {
               _splat: toDateString(new Date()),
             },
             search: {
-              mode: getHasDailyNote() ? "read" : "write",
               query: undefined,
             },
           })
@@ -162,7 +157,7 @@ export function CommandMenu() {
         },
       },
     ]
-  }, [navigate, getHasDailyNote])
+  }, [navigate])
 
   const filteredNavItems = useMemo(() => {
     return navItems.filter((item) => {
@@ -316,7 +311,6 @@ export function CommandMenu() {
                       _splat: dateString,
                     },
                     search: {
-                      mode: "read",
                       query: undefined,
                     },
                   })
@@ -408,7 +402,6 @@ export function CommandMenu() {
                       _splat: id,
                     },
                     search: {
-                      mode: "write",
                       query: undefined,
                     },
                   })

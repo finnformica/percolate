@@ -63,7 +63,6 @@ function PropertyValue({ property: [key, value], onChange }: PropertyValueProps)
               to="/notes/$"
               params={{ _splat: dateString }}
               search={{
-                mode: "read",
                 query: undefined,
               }}
             >
@@ -82,7 +81,6 @@ function PropertyValue({ property: [key, value], onChange }: PropertyValueProps)
               to="/notes/$"
               params={{ _splat: nextBirthdayString }}
               search={{
-                mode: "read",
                 query: undefined,
               }}
             >

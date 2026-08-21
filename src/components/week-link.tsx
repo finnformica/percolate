@@ -44,7 +44,6 @@ export function WeekLink({ week, text, className }: WeekLinkProps) {
       to="/notes/$"
       params={{ _splat: week }}
       search={{
-        mode: existingNote ? "read" : "write",
         query: undefined,
       }}
     />

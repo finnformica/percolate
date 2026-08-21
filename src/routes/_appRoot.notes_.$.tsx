@@ -61,9 +61,7 @@ import { parseNote } from "../utils/parse-note"
 import { pluralize } from "../utils/pluralize"
 
 type RouteSearch = {
-  mode: "read" | "write"
   query: string | undefined
-  tasks?: string | undefined
   content?: string
   /** Heading text to highlight in the block editor on landing (from Cmd-K). */
   heading?: string
@@ -72,9 +70,7 @@ type RouteSearch = {
 export const Route = createFileRoute("/_appRoot/notes_/$")({
   validateSearch: (search: Record<string, unknown>): RouteSearch => {
     return {
-      mode: search.mode === "write" ? "write" : "read",
       query: typeof search.query === "string" ? search.query : undefined,
-      tasks: typeof search.tasks === "string" ? search.tasks : undefined,
       content: typeof search.content === "string" ? search.content : undefined,
       heading: typeof search.heading === "string" ? search.heading : undefined,
     }

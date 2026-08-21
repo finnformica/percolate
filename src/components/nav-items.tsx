@@ -1,15 +1,9 @@
 import { Link, LinkComponentProps, useLocation } from "@tanstack/react-router"
 import { useAtom, useAtomValue, useSetAtom } from "jotai"
-import { selectAtom } from "jotai/utils"
 import { createContext, useContext } from "react"
 import { useNetworkState } from "react-use"
 import { useRegisterSW } from "virtual:pwa-register/react"
-import {
-  globalStateMachineAtom,
-  isHelpPanelOpenAtom,
-  notesAtom,
-  sortedNotesAtom,
-} from "../global-state"
+import { globalStateMachineAtom, isHelpPanelOpenAtom, sortedNotesAtom } from "../global-state"
 import type { Note } from "../schema"
 import { cx } from "../utils/cx"
 import { isValidDateString, isValidWeekString, toDateString } from "../utils/date"
@@ -30,8 +24,6 @@ import {
 import { NoteFavicon } from "./note-favicon"
 import { SyncStatusIcon, useSyncStatusText } from "./sync-status"
 
-const hasDailyNoteAtom = selectAtom(notesAtom, (notes) => notes.has(toDateString(new Date())))
-
 // Calendar and Tags are hidden from the sidebar for now while the block editor
 // is the focus. Flip to true to bring them back.
 const SHOW_CALENDAR_AND_TAGS = false
@@ -46,7 +38,6 @@ export function NavItems({
   onNavigate?: () => void
 }) {
   const notes = useAtomValue(sortedNotesAtom)
-  const hasDailyNote = useAtomValue(hasDailyNoteAtom)
   const syncText = useSyncStatusText()
   const send = useSetAtom(globalStateMachineAtom)
   const { online } = useNetworkState()
@@ -105,7 +96,6 @@ export function NavItems({
                     to="/notes/$"
                     params={{ _splat: todayString }}
                     search={{
-                      mode: hasDailyNote ? "read" : "write",
                       query: undefined,
                     }}
                     activeIcon={<CalendarDateFillIcon16 date={today.getDate()} />}
@@ -258,7 +248,7 @@ function NoteNavItem({
     <Link
       to="/notes/$"
       params={{ _splat: note.id }}
-      search={{ mode: "read", query: undefined }}
+      search={{ query: undefined }}
       activeOptions={{ exact: true, includeSearch: false }}
       data-size={size}
       className="nav-item w-0 flex-1"
