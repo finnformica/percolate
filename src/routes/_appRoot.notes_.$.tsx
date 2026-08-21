@@ -39,6 +39,7 @@ import {
 import { BlockNoteEditor } from "../components/block-editor/block-note-editor"
 import { NoteTitle } from "../components/block-editor/note-title"
 import { InsertTemplateDialog, removeFrontmatterComments } from "../components/insert-template"
+import { DayActivity } from "../components/day-activity"
 import { LinkHighlightProvider } from "../components/link-highlight-provider"
 import { Markdown } from "../components/markdown"
 import { NoteEditor } from "../components/note-editor"
@@ -65,7 +66,13 @@ import { useSearchNotes } from "../hooks/search-notes"
 import { useValueRef } from "../hooks/value-ref"
 import { Note, NoteId, Template, Width, fontSchema, widthSchema } from "../schema"
 import { cx } from "../utils/cx"
-import { formatDate, formatWeek, isValidDateString, isValidWeekString } from "../utils/date"
+import {
+  formatDate,
+  formatWeek,
+  isValidDateString,
+  isValidWeekString,
+  toDateString,
+} from "../utils/date"
 import { updateFrontmatterValue } from "../utils/frontmatter"
 import { clearNoteDraft, getNoteDraft, setNoteDraft } from "../utils/note-draft"
 import { getInvalidNoteIdCharacters } from "../utils/note-id"
@@ -145,6 +152,11 @@ function NotePage() {
   // Regular notes use the block editor; daily/weekly (calendar) notes keep the
   // classic editor so their date navigation is preserved.
   const useBlockEditor = !isDailyNote && !isWeeklyNote
+  // A daily note is editable only for the current day. Past/future days show a
+  // read-only, git-reconstructed view of what was written that day (the
+  // calendar time machine). "Today" is resolved in the current timezone, to
+  // match the floating YYYY-MM-DD note naming.
+  const isReadOnlyDailyNote = isDailyNote && noteId !== toDateString(new Date())
   const searchNotes = useSearchNotes()
   const saveNote = useSaveNote()
   const backlinks = React.useMemo(() => {
@@ -324,11 +336,13 @@ function NotePage() {
   }, [noteId, renameTo])
 
   const switchToWriting = React.useCallback(() => {
+    // Past/future daily notes are read-only history — never enter write mode.
+    if (isReadOnlyDailyNote) return
     navigate({ search: (prev) => ({ ...prev, mode: "write" }), replace: true })
     setTimeout(() => {
       editorRef.current?.view?.focus()
     })
-  }, [navigate])
+  }, [navigate, isReadOnlyDailyNote])
 
   const switchToReading = React.useCallback(() => {
     navigate({ search: (prev) => ({ ...prev, mode: "read" }), replace: true })
@@ -452,7 +466,7 @@ function NotePage() {
             </Button>
           ) : null}
 
-          {!useBlockEditor ? (
+          {!useBlockEditor && !isReadOnlyDailyNote ? (
             <SegmentedControl aria-label="Mode" size="small" className="hidden sm:flex">
               {mode === "read" ? (
                 <SegmentedControl.Segment selected onClick={switchToReading}>
@@ -493,7 +507,7 @@ function NotePage() {
             </SegmentedControl>
           ) : null}
           <div className="flex items-center">
-            {!useBlockEditor ? (
+            {!useBlockEditor && !isReadOnlyDailyNote ? (
               <IconButton
                 aria-label="Attach file"
                 size="small"
@@ -697,8 +711,8 @@ function NotePage() {
         ref={containerRef}
         className="@container"
         onMouseDown={(event) => {
-          // Double click to edit
-          if (mode === "read" && event.detail > 1) {
+          // Double click to edit (read-only history days can't be edited)
+          if (mode === "read" && event.detail > 1 && !isReadOnlyDailyNote) {
             event.preventDefault()
             switchToWriting()
           }
@@ -731,6 +745,8 @@ function NotePage() {
                   highlightHeading={highlightHeading}
                 />
               </div>
+            ) : isReadOnlyDailyNote ? (
+              <DayActivity date={noteId ?? ""} />
             ) : (
               <>
                 {mode === "read" && (

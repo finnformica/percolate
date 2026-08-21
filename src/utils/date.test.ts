@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest"
 import {
   formatDate,
   formatDateDistance,
+  getDayRangeUtc,
   getNextBirthday,
   isValidDateString,
   isValidUnixTimestamp,
@@ -102,5 +103,35 @@ describe("isValidUnixTimestamp", () => {
     expect(isValidUnixTimestamp("-1")).toBe(false)
     expect(isValidUnixTimestamp("hello")).toBe(false)
     expect(isValidUnixTimestamp("1626000000000.5")).toBe(false)
+  })
+})
+
+describe("getDayRangeUtc", () => {
+  // Invariants that hold regardless of the host timezone the test runs in.
+  test("brackets the local day for the given date", () => {
+    const { since, until } = getDayRangeUtc("2026-08-15")
+    // The range starts at local midnight of the date...
+    const start = new Date(since)
+    expect(toDateString(start)).toBe("2026-08-15")
+    expect(start.getHours()).toBe(0)
+    expect(start.getMinutes()).toBe(0)
+    // ...and ends at local midnight of the next day.
+    const end = new Date(until)
+    expect(toDateString(end)).toBe("2026-08-16")
+    expect(end.getHours()).toBe(0)
+  })
+
+  test("spans roughly one day (23–25h to allow for DST)", () => {
+    const { since, until } = getDayRangeUtc("2026-03-08")
+    const hours = (new Date(until).getTime() - new Date(since).getTime()) / 3_600_000
+    expect(hours).toBeGreaterThanOrEqual(23)
+    expect(hours).toBeLessThanOrEqual(25)
+  })
+
+  test("returns valid ISO (UTC) instants", () => {
+    const { since, until } = getDayRangeUtc("2026-01-01")
+    expect(since).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
+    expect(until).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
+    expect(new Date(until).getTime()).toBeGreaterThan(new Date(since).getTime())
   })
 })

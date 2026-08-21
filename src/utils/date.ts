@@ -193,6 +193,32 @@ export function toWeekString(date: Date) {
   return `${year}-W${weekNumber}`
 }
 
+/**
+ * The UTC instant range `[since, until)` that a calendar date covers in the
+ * current device timezone. Used to bucket git commits — which are absolute
+ * instants — into the day a `YYYY-MM-DD` refers to, matching how the calendar
+ * labels days ("timed events shown in your current timezone").
+ *
+ * `new Date(y, m, d)` constructs local midnight as an absolute instant, so
+ * `.toISOString()` yields the correct UTC boundary, DST shifts included.
+ * Expects a valid `YYYY-MM-DD` string.
+ */
+export function getDayRangeUtc(dateString: string): { since: string; until: string } {
+  const [year, month, day] = dateString.split("-").map(Number)
+  const start = new Date(year, month - 1, day, 0, 0, 0, 0)
+  const end = new Date(year, month - 1, day + 1, 0, 0, 0, 0)
+  return { since: start.toISOString(), until: end.toISOString() }
+}
+
+/**
+ * Formats an absolute instant (e.g. a git commit time) as a short local
+ * time-of-day in the current timezone — e.g. "3:42 PM".
+ */
+export function formatTimeOfDay(instant: Date | string): string {
+  const date = typeof instant === "string" ? new Date(instant) : instant
+  return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
+}
+
 export function getNextBirthday(birthday: Date): Date {
   const today = new Date()
   const currentYear = today.getFullYear()
