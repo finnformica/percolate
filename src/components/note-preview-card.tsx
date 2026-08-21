@@ -7,6 +7,7 @@ import { useNetworkState } from "react-use"
 import { githubRepoAtom, globalStateMachineAtom, isSignedOutAtom } from "../global-state"
 import { useDeleteNote, useNoteById, useSaveNote } from "../hooks/note"
 import { NoteId } from "../schema"
+import { copyAsMarkdown } from "../utils/copy-markdown"
 import { cx } from "../utils/cx"
 import { updateFrontmatterValue } from "../utils/frontmatter"
 import { pluralize } from "../utils/pluralize"
@@ -122,7 +123,10 @@ const _NotePreviewCard = React.memo(function NoteCard({ id }: NoteCardProps) {
               }
             />
             <DropdownMenu.Content align="end" side="top">
-              <DropdownMenu.Item icon={<CopyIcon16 />} onClick={() => copy(note?.content ?? "")}>
+              <DropdownMenu.Item
+                icon={<CopyIcon16 />}
+                onClick={() => copyAsMarkdown(note?.content ?? "")}
+              >
                 Copy markdown
               </DropdownMenu.Item>
               <DropdownMenu.Item icon={<CopyIcon16 />} onClick={() => copy(id)}>

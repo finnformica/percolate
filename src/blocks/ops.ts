@@ -32,6 +32,21 @@ function siblingList(doc: BlockDoc, parentId: string | null): string[] {
   return parentId === null ? doc.rootBlockIds : doc.blocks[parentId].children
 }
 
+/**
+ * A block's place in the tree: its parent (null at the root), the ordered ids of
+ * its sibling group, and its own index within them. `null` if the block is
+ * unknown. Used by sibling / level navigation.
+ */
+export function siblingsOf(
+  doc: BlockDoc,
+  id: string,
+): { parentId: string | null; siblings: string[]; index: number } | null {
+  const parentId = findParentId(doc, id)
+  if (parentId === undefined) return null
+  const siblings = siblingList(doc, parentId)
+  return { parentId, siblings, index: siblings.indexOf(id) }
+}
+
 export function updateContent(doc: BlockDoc, id: string, content: string): BlockDoc {
   const block = doc.blocks[id]
   if (!block) return doc
@@ -140,6 +155,23 @@ export function indentBlock(doc: BlockDoc, id: string): BlockDoc {
   if (parentId === null) next.rootBlockIds = newList
   else next.blocks[parentId] = { ...next.blocks[parentId], children: newList }
   next.blocks[prevId] = { ...next.blocks[prevId], children: [...next.blocks[prevId].children, id] }
+  return next
+}
+
+/** Reorder a block among its siblings, carrying its subtree with it. Returns
+ * the doc unchanged when it's already at the end it's moving toward. */
+export function moveBlock(doc: BlockDoc, id: string, direction: "up" | "down"): BlockDoc {
+  const parentId = findParentId(doc, id)
+  if (parentId === undefined) return doc
+  const list = siblingList(doc, parentId)
+  const i = list.indexOf(id)
+  const j = direction === "up" ? i - 1 : i + 1
+  if (j < 0 || j >= list.length) return doc
+  const next = clone(doc)
+  const newList = [...list]
+  ;[newList[i], newList[j]] = [newList[j], newList[i]]
+  if (parentId === null) next.rootBlockIds = newList
+  else next.blocks[parentId] = { ...next.blocks[parentId], children: newList }
   return next
 }
 

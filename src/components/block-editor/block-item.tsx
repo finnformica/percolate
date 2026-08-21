@@ -9,6 +9,8 @@ import {
   toggleTodo,
   type BlockType,
 } from "../../blocks/block-type"
+import type { CaretInput, Mode } from "../../blocks/commands"
+import type { KeyLike } from "../../blocks/keymap"
 import { IconButton } from "../icon-button"
 import { BlockContent } from "./block-content"
 import { caretLineFlags } from "./caret"
@@ -22,66 +24,68 @@ export interface FocusRequest {
 
 export interface BlockEditorApi {
   focus: FocusRequest | null
-  /** The highlighted block in select mode (null while editing or unfocused). */
+  /** The head of the selection in select mode (null while editing/unfocused). */
   selected: string | null
+  /** All highlighted block ids (a Shift+Arrow range, or just the head). */
+  selectedSet: Set<string>
   collapsed: Set<string>
   /** Display-only: no editing, selection, or mutation (collapse still works). */
   readOnly?: boolean
-  /** Highlight a block (leaves edit mode). */
+  /** Highlight a block (leaves edit mode, collapses any multi-selection). */
   select: (id: string) => void
   /** Enter edit mode for a block. */
   edit: (id: string, atStart?: boolean) => void
-  /** Leave edit mode and re-highlight the block. */
-  escapeEdit: (id: string) => void
-  /** Move the highlight to the previous/next visible block. */
-  moveSelection: (id: string, direction: "up" | "down") => void
   toggleCollapse: (id: string) => void
   setFocus: (focus: FocusRequest | null) => void
   onContentChange: (id: string, content: string) => void
-  /** Insert a new block after `id`, optionally pre-filled (e.g. a list marker). */
-  onEnter: (id: string, initial?: string) => void
-  /** Insert a new block before `id`, optionally pre-filled (e.g. a list marker). */
-  onEnterBefore: (id: string, initial?: string) => void
-  /** Split `id`: keep `keepContent`, move the rest into a new block after it. */
-  onSplit: (id: string, keepContent: string, newContent: string) => void
   /** Replace `id` with blocks parsed from pasted markdown, placing the caret. */
   onPaste: (id: string, prefix: string, before: string, pasted: string, after: string) => void
-  onIndent: (id: string) => void
-  onOutdent: (id: string) => void
-  onBackspaceEmpty: (id: string) => void
-  /** While editing, move edit focus to the previous/next block. */
-  onArrowUp: (id: string) => void
-  onArrowDown: (id: string) => void
+  /**
+   * Resolve a key event to an editor command (via the keymap) and run it.
+   * Every keyboard interaction funnels through here; returns whether the event
+   * was consumed (so the caller can `preventDefault`).
+   */
+  dispatchKey: (mode: Mode, id: string, event: KeyLike, caret?: CaretInput) => boolean
 }
 
-/** The marker a new sibling block should carry to continue a list. */
-function continuationMarker(type: BlockType): string {
-  switch (type.kind) {
-    case "bullet":
-      return "- "
-    case "todo":
-      return "[ ] "
-    case "ordered":
-      return `${type.number + 1}. `
+/** Extra space above a heading, proportional to its size (i.e. its outline
+ * depth), so sections breathe. Applied to the block's outer wrapper (shared by
+ * view and edit) so switching modes never shifts the text. */
+function headingTopMargin(type: BlockType, depth: number): string {
+  if (type.kind !== "heading") return ""
+  switch (depth) {
+    case 0:
+      return "mt-3"
+    case 1:
+      return "mt-2"
+    case 2:
+      return "mt-1.5"
     default:
-      return ""
+      return "mt-1"
   }
 }
 
-/** Typography shared by a block's rendered view and its edit textarea, so
- * switching between them never changes the text's size or weight. */
-function typographyFor(type: BlockType): string {
+/**
+ * Typography shared by a block's rendered view and its edit textarea, so
+ * switching between them never changes the text's size or weight.
+ *
+ * Headings are sized by how deeply they're nested in the outline — not by how
+ * many `#`s were typed (the marker is normalised to a single `#` on save). The
+ * deepest level floors at body size, kept bold and underlined so it still reads
+ * as a heading rather than a paragraph.
+ */
+function typographyFor(type: BlockType, depth: number): string {
   switch (type.kind) {
     case "heading":
-      switch (type.level) {
-        case 1:
+      switch (depth) {
+        case 0:
           return "text-2xl font-bold"
-        case 2:
+        case 1:
           return "text-xl font-bold"
-        case 3:
+        case 2:
           return "text-lg font-bold"
         default:
-          return "text-base font-bold"
+          return "text-base font-bold underline"
       }
     case "quote":
       return "italic text-text-secondary"
@@ -103,11 +107,10 @@ export function BlockItem({
 }) {
   const readOnly = api.readOnly ?? false
   const editing = !readOnly && api.focus?.id === block.id
-  const selected = api.selected === block.id && !editing
+  const selected = api.selectedSet.has(block.id) && !editing
   const hasChildren = block.children.length > 0
   const isCollapsed = api.collapsed.has(block.id)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const viewRef = useRef<HTMLDivElement>(null)
   const pendingCaret = useRef<number | null>(null)
 
   const type = getBlockType(block.content)
@@ -116,7 +119,7 @@ export function BlockItem({
   // keeps the view and the editor pixel-identical — nothing shifts on click.
   const body = stripMarker(block.content)
   const prefix = block.content.slice(0, block.content.length - body.length)
-  const typo = typographyFor(type)
+  const typo = typographyFor(type, depth)
 
   // Focus and place the caret when editing starts.
   useLayoutEffect(() => {
@@ -149,11 +152,6 @@ export function BlockItem({
     }
   }, [editing, block.content])
 
-  // Give the block keyboard focus while it's the highlighted (selected) one.
-  useLayoutEffect(() => {
-    if (selected) viewRef.current?.focus()
-  }, [selected])
-
   const handleTextareaChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     const el = event.currentTarget
     const newBody = el.value
@@ -174,62 +172,20 @@ export function BlockItem({
   }
 
   const handleEditKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && event.shiftKey) {
-      // Shift-Enter inserts a fresh block *above* the current one (same list
-      // style), rather than a soft line break — the file format is one block
-      // per line, so in-block newlines aren't representable anyway.
-      event.preventDefault()
-      api.onEnterBefore(block.id, continuationMarker(type))
-    } else if (event.key === "Enter") {
-      event.preventDefault()
-      const el = event.currentTarget
-      const isList = type.kind === "bullet" || type.kind === "todo" || type.kind === "ordered"
-      const beforeBody = el.value.slice(0, el.selectionStart)
-      const afterBody = el.value.slice(el.selectionEnd)
-      const hasSelection = el.selectionStart !== el.selectionEnd
-      if (isList && body.trim() === "") {
-        // Enter on an empty list item exits the list (becomes a paragraph).
-        api.onContentChange(block.id, "")
-      } else if (!hasSelection && afterBody === "") {
-        // Caret at the end — just start a fresh block.
-        api.onEnter(block.id, continuationMarker(type))
-      } else {
-        // Caret mid-line (or a selection): keep the text before the caret and
-        // move the text after it into the new block, continuing the list style.
-        api.onSplit(block.id, prefix + beforeBody, continuationMarker(type) + afterBody)
-      }
-    } else if (event.key === "Escape") {
-      event.preventDefault()
-      api.escapeEdit(block.id)
-    } else if (event.key === "Tab") {
-      event.preventDefault()
-      if (event.shiftKey) api.onOutdent(block.id)
-      else api.onIndent(block.id)
-    } else if (event.key === "Backspace") {
-      const el = event.currentTarget
-      if (el.selectionStart === 0 && el.selectionEnd === 0) {
-        if (prefix !== "") {
-          // Backspace at the start strips the block's marker (→ paragraph).
-          event.preventDefault()
-          api.onContentChange(block.id, body)
-        } else if (body === "") {
-          event.preventDefault()
-          api.onBackspaceEmpty(block.id)
-        }
-      }
-    } else if (event.key === "ArrowUp" && !event.shiftKey && !event.metaKey && !event.altKey) {
-      // Only leave the block when the caret is on its first *visual* line —
-      // otherwise let the textarea move the caret up within a wrapped block.
-      if (caretLineFlags(event.currentTarget).atFirst) {
-        event.preventDefault()
-        api.onArrowUp(block.id)
-      }
-    } else if (event.key === "ArrowDown" && !event.shiftKey && !event.metaKey && !event.altKey) {
-      if (caretLineFlags(event.currentTarget).atLast) {
-        event.preventDefault()
-        api.onArrowDown(block.id)
-      }
+    const el = event.currentTarget
+    // Line geometry is only needed to decide whether an arrow leaves the block,
+    // and measuring it mirrors the textarea into the DOM — so skip it for every
+    // other key.
+    const isArrow = event.key === "ArrowUp" || event.key === "ArrowDown"
+    const flags = isArrow ? caretLineFlags(el) : { atFirst: false, atLast: false }
+    const caret: CaretInput = {
+      value: el.value,
+      start: el.selectionStart,
+      end: el.selectionEnd,
+      atFirstLine: flags.atFirst,
+      atLastLine: flags.atLast,
     }
+    if (api.dispatchKey("edit", block.id, event, caret)) event.preventDefault()
   }
 
   const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
@@ -243,27 +199,6 @@ export function BlockItem({
     const before = el.value.slice(0, el.selectionStart)
     const after = el.value.slice(el.selectionEnd)
     api.onPaste(block.id, prefix, before, normalized, after)
-  }
-
-  const handleSelectKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Enter") {
-      event.preventDefault()
-      api.edit(block.id)
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault()
-      api.moveSelection(block.id, "up")
-    } else if (event.key === "ArrowDown") {
-      event.preventDefault()
-      api.moveSelection(block.id, "down")
-    } else if ((event.key === "x" || event.key === "X") && type.kind === "todo") {
-      // Toggle a todo's checkbox from select mode.
-      event.preventDefault()
-      api.onContentChange(block.id, toggleTodo(block.content))
-    } else if (event.key === " " && hasChildren) {
-      // Collapse/expand a block with children from select mode.
-      event.preventDefault()
-      api.toggleCollapse(block.id)
-    }
   }
 
   const marker =
@@ -292,32 +227,43 @@ export function BlockItem({
     ) : null
 
   return (
-    <div>
+    <div data-block-row={block.id} className={cx(headingTopMargin(type, depth))}>
       <div className="group relative flex items-start gap-1">
-        <IconButton
-          aria-label={isCollapsed ? "Expand" : "Collapse"}
-          size="small"
-          disableTooltip
-          tabIndex={-1}
-          onClick={() => api.toggleCollapse(block.id)}
-          className={cx(
-            "mt-0.5 w-6 shrink-0 text-text-tertiary",
-            !hasChildren && "pointer-events-none opacity-0",
-          )}
-        >
-          <svg
-            width="8"
-            height="8"
-            viewBox="0 0 8 8"
-            aria-hidden
-            className={cx("transition-transform", isCollapsed ? "rotate-0" : "rotate-90")}
-          >
-            <path d="M2 1l4 3-4 3z" fill="currentColor" />
-          </svg>
-        </IconButton>
+        {/* The toggle stays a fixed square; the wrapper mirrors the content
+            cell's padding + line-height (via `typo`) and centres the square on
+            the block's first line, so it aligns whatever the heading size. */}
+        <div className={cx("flex shrink-0 py-0.5 font-content leading-relaxed", typo)}>
+          <span className="flex h-[1lh] items-center">
+            <IconButton
+              aria-label={isCollapsed ? "Expand" : "Collapse"}
+              size="small"
+              disableTooltip
+              tabIndex={-1}
+              onClick={() => api.toggleCollapse(block.id)}
+              className={cx(
+                "size-6 shrink-0 p-0 text-text-tertiary",
+                !hasChildren && "pointer-events-none opacity-0",
+              )}
+            >
+              <svg
+                width="8"
+                height="8"
+                viewBox="0 0 8 8"
+                aria-hidden
+                className={cx("transition-transform", isCollapsed ? "rotate-0" : "rotate-90")}
+              >
+                <path d="M2 1l4 3-4 3z" fill="currentColor" />
+              </svg>
+            </IconButton>
+          </span>
+        </div>
 
         <div className="min-w-0 flex-1 py-0.5 font-content leading-relaxed">
           <div
+            // The visible content line (carries the highlight). Scroll-into-view
+            // targets this, not the row wrapper, so a heading's top margin can't
+            // distort where the highlight lands.
+            data-block-line
             className={cx(
               "flex items-start gap-2 rounded-sm px-1",
               selected && "bg-bg-secondary",
@@ -341,8 +287,10 @@ export function BlockItem({
                 )}
               />
             ) : (
+              // Keyboard for select mode is handled by the editor container (it
+              // holds focus); this element only needs the pointer interactions.
+              // eslint-disable-next-line jsx-a11y/no-static-element-interactions
               <div
-                ref={viewRef}
                 data-testid="block-body"
                 data-block-id={block.id}
                 className={cx(
@@ -354,11 +302,8 @@ export function BlockItem({
                 {...(readOnly
                   ? {}
                   : {
-                      role: "button" as const,
-                      tabIndex: 0,
                       onClick: () => api.select(block.id),
                       onDoubleClick: () => api.edit(block.id),
-                      onKeyDown: handleSelectKeyDown,
                     })}
               >
                 <BlockContent content={body} doc={doc} />
@@ -369,7 +314,8 @@ export function BlockItem({
       </div>
 
       {hasChildren && !isCollapsed ? (
-        <div className="ml-2.5 border-l border-border-secondary pl-3">
+        // Left margin puts the guide line under the toggle's centre (w-6 → 12px).
+        <div className="ml-3 border-l border-border-secondary pl-3">
           {block.children.map((childId) => {
             const child = doc.blocks[childId]
             if (!child) return null

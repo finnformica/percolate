@@ -21,6 +21,7 @@ import {
   TagFillIcon16,
   TagIcon16,
 } from "./icons"
+import { NoteActionsMenu } from "./note-actions-menu"
 import { NoteFavicon } from "./note-favicon"
 import { SyncStatusIcon, useSyncStatusText } from "./sync-status"
 
@@ -115,10 +116,23 @@ export function NavItems({
             </li>
           </ul>
           {notes.length > 0 ? (
-            <ul className="flex flex-col gap-1">
+            <ul className="flex flex-col gap-1 border-t border-border-secondary pt-3">
               {notes.map((note) => (
-                <li key={note.id} className="flex">
+                <li key={note.id} className="group/note flex items-center">
+                  {/* The note fills the row; on hover the actions menu takes its
+                      own space to the right (a real flex sibling), so the note
+                      name truncates with an ellipsis to make room rather than
+                      sitting under the button. The menu stays visible while its
+                      dropdown is open. */}
                   <NoteNavItem note={note} size={size} onNavigate={onNavigate} />
+                  <div className="hidden shrink-0 pl-0.5 group-hover/note:flex has-data-[popup-open]:flex">
+                    <NoteActionsMenu
+                      noteId={note.id}
+                      content={note.content}
+                      pinned={note.pinned}
+                      backlinks={note.backlinks}
+                    />
+                  </div>
                 </li>
               ))}
             </ul>
@@ -255,10 +269,12 @@ function NoteNavItem({
   note,
   size,
   onNavigate,
+  className,
 }: {
   note: Note
   size: "medium" | "large"
   onNavigate?: () => void
+  className?: string
 }) {
   return (
     <Link
@@ -267,7 +283,7 @@ function NoteNavItem({
       search={{ query: undefined }}
       activeOptions={{ exact: true, includeSearch: false }}
       data-size={size}
-      className="nav-item w-0 flex-1"
+      className={cx("nav-item w-0 flex-1", className)}
       onClick={(event) => {
         if (!event.defaultPrevented) onNavigate?.()
       }}

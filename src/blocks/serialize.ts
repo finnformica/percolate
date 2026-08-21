@@ -21,6 +21,15 @@ import type { Block, BlockDoc } from "./types"
  * `- ` outline marker — keeps the markdown clean and lets blocks be real
  * paragraphs/headings, not just list items.
  */
+/**
+ * Headings carry a single `#` on disk regardless of how many were typed — their
+ * visual level comes from outline depth, not the marker — so the marker is
+ * normalised here on the way out. `## Foo` → `# Foo`; non-headings untouched.
+ */
+function normalizeHeadingMarker(content: string): string {
+  return content.replace(/^#{2,6}(\s)/, "#$1")
+}
+
 export function serialize(doc: BlockDoc): string {
   const lines: string[] = []
 
@@ -35,7 +44,7 @@ export function serialize(doc: BlockDoc): string {
     if (!block) return
     const indent = "  ".repeat(depth)
     // The content line (empty content → just the indent, so depth is preserved).
-    lines.push(`${indent}${block.content}`)
+    lines.push(`${indent}${normalizeHeadingMarker(block.content)}`)
     lines.push(`${indent}  id:: ${block.id}`)
     for (const childId of block.children) walk(childId, depth + 1)
   }

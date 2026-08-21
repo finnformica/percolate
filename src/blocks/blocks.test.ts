@@ -33,6 +33,13 @@ describe("block round-trip", () => {
     expect(doc.blocks["blk_ccc"].content).toBe("[ ] a todo")
   })
 
+  it("normalizes a multi-# heading to a single # on serialize", () => {
+    // Heading size comes from outline depth, so the marker is always one `#`.
+    const doc = parse(`### Deep heading\n  id:: blk_x\n`)
+    expect(doc.blocks["blk_x"].content).toBe("### Deep heading")
+    expect(serialize(doc)).toBe(`# Deep heading\n  id:: blk_x\n`)
+  })
+
   it("does not double a bullet's marker", () => {
     // A block whose content is a bullet keeps exactly one `- ` on disk.
     const doc = parse(`- item\n  id:: blk_x\n`)

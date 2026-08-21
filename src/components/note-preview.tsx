@@ -10,6 +10,7 @@ import {
   formatWeekDistance,
   isValidDateString,
 } from "../utils/date"
+import { toDisplayMarkdown } from "../blocks/to-display-markdown"
 import { parseFrontmatter } from "../utils/frontmatter"
 import { getNoteDraft } from "../utils/note-draft"
 import { DotIcon8, GlobeIcon12, LinkIcon12, TagIcon12 } from "./icons"
@@ -44,6 +45,11 @@ export function NotePreview({ note, className, hideProperties }: NotePreviewProp
   const resolvedFrontmatter = useMemo(() => {
     return parseFrontmatter(resolvedContent).frontmatter
   }, [resolvedContent])
+
+  // The stored content is the block format (id:: lines, bare `[ ]` todos); turn
+  // it into plain markdown before rendering so the preview isn't full of raw
+  // block metadata.
+  const displayContent = useMemo(() => toDisplayMarkdown(resolvedContent), [resolvedContent])
 
   // Resolve note font (frontmatter font or default)
   const resolvedFont = useMemo(() => {
@@ -149,7 +155,7 @@ export function NotePreview({ note, className, hideProperties }: NotePreviewProp
       <div className="grow overflow-hidden [mask-image:linear-gradient(to_bottom,black_0%,black_75%,transparent_100%)] epaper:[mask-image:none] [&_*::-webkit-scrollbar]:hidden">
         <div className="w-[152%] origin-top-left scale-[66%]">
           <Markdown hideFrontmatter emptyText="Empty note">
-            {resolvedContent}
+            {displayContent}
           </Markdown>
         </div>
       </div>

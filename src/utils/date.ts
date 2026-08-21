@@ -258,15 +258,6 @@ export function getDayRangeUtc(
   return { since: since.toISOString(), until: until.toISOString() }
 }
 
-/**
- * Formats an absolute instant (e.g. a git commit time) as a short local
- * time-of-day in the current timezone — e.g. "3:42 PM".
- */
-export function formatTimeOfDay(instant: Date | string): string {
-  const date = typeof instant === "string" ? new Date(instant) : instant
-  return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
-}
-
 export function getNextBirthday(birthday: Date): Date {
   const today = new Date()
   const currentYear = today.getFullYear()

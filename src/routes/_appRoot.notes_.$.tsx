@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router"
-import copy from "copy-to-clipboard"
 import ejs from "ejs"
 import { useAtomValue } from "jotai"
 import { selectAtom } from "jotai/utils"
@@ -13,27 +12,11 @@ import { CalendarHeader } from "../components/calendar-header"
 import { DaysOfWeek } from "../components/days-of-week"
 import { Details } from "../components/details"
 import { DraftIndicator } from "../components/draft-indicator"
-import { DropdownMenu } from "../components/dropdown-menu"
 import { IconButton } from "../components/icon-button"
-import {
-  CheckIcon16,
-  CopyIcon16,
-  EditIcon16,
-  ExternalLinkIcon16,
-  LoadingIcon16,
-  MoreIcon16,
-  NoteIcon16,
-  PinFillIcon16,
-  PinIcon16,
-  PrinterIcon16,
-  ShareIcon16,
-  TrashIcon16,
-  UndoIcon16,
-  WidthFixedIcon16,
-  WidthFullIcon16,
-} from "../components/icons"
+import { CheckIcon16, LoadingIcon16, NoteIcon16 } from "../components/icons"
 import { BlockNoteEditor } from "../components/block-editor/block-note-editor"
 import { NoteTitle } from "../components/block-editor/note-title"
+import { NoteActionsMenu } from "../components/note-actions-menu"
 import { DayActivity } from "../components/day-activity"
 import { LinkHighlightProvider } from "../components/link-highlight-provider"
 import { NoteFavicon } from "../components/note-favicon"
@@ -49,7 +32,7 @@ import {
   isSignedOutAtom,
   weeklyTemplateAtom,
 } from "../global-state"
-import { useDeleteNote, useNoteById, useRenameNote, useSaveNote } from "../hooks/note"
+import { useNoteById, useRenameNote, useSaveNote } from "../hooks/note"
 import { useSearchNotes } from "../hooks/search-notes"
 import { Note, NoteId, Template, Width, fontSchema, widthSchema } from "../schema"
 import { cx } from "../utils/cx"
@@ -58,7 +41,6 @@ import { removeFrontmatterComments, updateFrontmatterValue } from "../utils/fron
 import { clearNoteDraft, getNoteDraft, setNoteDraft } from "../utils/note-draft"
 import { getInvalidNoteIdCharacters } from "../utils/note-id"
 import { parseNote } from "../utils/parse-note"
-import { pluralize } from "../utils/pluralize"
 
 type RouteSearch = {
   query: string | undefined
@@ -183,8 +165,17 @@ function NotePage() {
   const { ref: containerRef, width: containerWidth = 0 } = useResizeObserver()
   const [isShareDialogOpen, setIsShareDialogOpen] = React.useState(false)
 
+  // Keyboard flow between the note title and the block editor: the editor bumps
+  // titleFocusSignal to select the title (arrow up past the first block); the
+  // title bumps focusFirstSignal to move back into the first block (arrow down).
+  const [focusFirstSignal, setFocusFirstSignal] = useState(0)
+  // Whether the last title→editor hand-off should open the first block editing
+  // (title was being edited) or just highlighted (title was highlighted).
+  const [focusFirstMode, setFocusFirstMode] = useState<"edit" | "select">("select")
+  const [titleFocusSignal, setTitleFocusSignal] = useState(0)
+  const [newRootSignal, setNewRootSignal] = useState(0)
+
   // Actions
-  const deleteNote = useDeleteNote()
   const renameNote = useRenameNote()
 
   const handleSave = React.useCallback(
@@ -218,15 +209,10 @@ function NotePage() {
     }
   }, [isSyncing])
 
-  // Ticks each time the note is saved. Passed to the block editor so it can
-  // collapse its local undo history at each commit (undo can't cross a save).
-  const [saveEpoch, setSaveEpoch] = useState(0)
-
   const requestSave = React.useCallback(() => {
     if (isSignedOut || !isDraft) return
     setPendingSave(true)
     handleSave(editorValue)
-    setSaveEpoch((epoch) => epoch + 1)
     window.setTimeout(() => setPendingSave(false), 4000)
   }, [isSignedOut, isDraft, handleSave, editorValue])
 
@@ -299,13 +285,6 @@ function NotePage() {
     [noteId, renameNote, editorValue, githubRepo, navigate],
   )
 
-  const handleRename = React.useCallback(() => {
-    if (!noteId) return
-    const raw = window.prompt("Rename file", noteId)
-    if (raw == null) return
-    renameTo(raw)
-  }, [noteId, renameTo])
-
   // Save with ⌘S
   useHotkeys(
     "mod+s",
@@ -345,141 +324,27 @@ function NotePage() {
           ) : null}
 
           <div className="flex items-center">
-            <IconButton
-              aria-label={parsedNote?.pinned ? "Unpin" : "Pin"}
-              size="small"
-              onClick={() => {
-                const newContent = updateFrontmatterValue({
-                  content: editorValue,
-                  properties: { pinned: parsedNote?.pinned ? null : true },
-                })
-                setEditorValue(newContent)
-                handleSave(newContent)
+            <NoteActionsMenu
+              noteId={noteId ?? ""}
+              content={editorValue}
+              pinned={parsedNote?.pinned ?? false}
+              backlinks={note?.backlinks ?? []}
+              align="end"
+              onContentChange={(next) => {
+                setEditorValue(next)
+                handleSave(next)
               }}
-            >
-              {parsedNote?.pinned ? <PinFillIcon16 className="text-text-pinned" /> : <PinIcon16 />}
-            </IconButton>
-            <DropdownMenu modal={false}>
-              <DropdownMenu.Trigger
-                render={
-                  <IconButton aria-label="More actions" size="small" disableTooltip>
-                    <MoreIcon16 />
-                  </IconButton>
-                }
-              />
-              <DropdownMenu.Content align="end">
-                {isDraft ? (
-                  <>
-                    <DropdownMenu.Item
-                      icon={<UndoIcon16 />}
-                      onClick={() => {
-                        discardChanges()
-                      }}
-                    >
-                      Discard changes
-                    </DropdownMenu.Item>
-                    <DropdownMenu.Separator />
-                  </>
-                ) : null}
-                {containerWidth > 800 && (
-                  <>
-                    <DropdownMenu.Group>
-                      <DropdownMenu.GroupLabel>Width</DropdownMenu.GroupLabel>
-                      <DropdownMenu.Item
-                        icon={<WidthFixedIcon16 />}
-                        selected={resolvedWidth === "fixed"}
-                        onClick={() => {
-                          updateWidth("fixed")
-                        }}
-                      >
-                        Fixed
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Item
-                        icon={<WidthFullIcon16 />}
-                        selected={resolvedWidth === "full"}
-                        onClick={() => {
-                          updateWidth("full")
-                        }}
-                      >
-                        Full
-                      </DropdownMenu.Item>
-                    </DropdownMenu.Group>
-                    <DropdownMenu.Separator />
-                  </>
-                )}
-                <DropdownMenu.Item icon={<CopyIcon16 />} onClick={() => copy(editorValue)}>
-                  Copy markdown
-                </DropdownMenu.Item>
-                <DropdownMenu.Item icon={<CopyIcon16 />} onClick={() => copy(noteId ?? "")}>
-                  Copy ID
-                </DropdownMenu.Item>
-                <DropdownMenu.Item
-                  icon={<EditIcon16 />}
-                  disabled={isSignedOut}
-                  onClick={handleRename}
-                >
-                  Rename file
-                </DropdownMenu.Item>
-                <DropdownMenu.Separator />
-                <DropdownMenu.Item
-                  icon={<ShareIcon16 />}
-                  disabled={isSignedOut || !note || !online}
-                  onClick={() => setIsShareDialogOpen(true)}
-                >
-                  Share
-                </DropdownMenu.Item>
-                <DropdownMenu.Item
-                  icon={<ExternalLinkIcon16 />}
-                  href={`https://github.com/${githubRepo?.owner}/${githubRepo?.name}/blob/main/${noteId}.md`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  disabled={isSignedOut || !note}
-                >
-                  Open in GitHub
-                </DropdownMenu.Item>
-                <DropdownMenu.Item icon={<PrinterIcon16 />} onClick={() => window.print()}>
-                  Print
-                </DropdownMenu.Item>
-                <DropdownMenu.Separator />
-                <DropdownMenu.Item
-                  variant="danger"
-                  icon={<TrashIcon16 />}
-                  disabled={isSignedOut}
-                  onClick={() => {
-                    if (!noteId) return
-
-                    // Ask the user to confirm before deleting a note with backlinks
-                    if (
-                      note &&
-                      note.backlinks.length > 0 &&
-                      !window.confirm(
-                        `${note.id}.md has ${pluralize(
-                          note.backlinks.length,
-                          "backlink",
-                        )}. Are you sure you want to delete it?`,
-                      )
-                    ) {
-                      return
-                    }
-
-                    clearNoteDraft({ githubRepo, noteId })
-
-                    if (note) {
-                      deleteNote(note.id)
-                    }
-
-                    // Go home
-                    navigate({
-                      to: "/",
-                      search: { query: undefined },
-                      replace: true,
-                    })
-                  }}
-                >
-                  Delete
-                </DropdownMenu.Item>
-              </DropdownMenu.Content>
-            </DropdownMenu>
+              editor={{
+                isDraft,
+                onDiscard: discardChanges,
+                showWidth: containerWidth > 800,
+                width: resolvedWidth,
+                onWidth: updateWidth,
+                onShare: () => setIsShareDialogOpen(true),
+                canShare: !isSignedOut && !!note && !!online,
+                onDeleted: () => navigate({ to: "/", search: { query: undefined }, replace: true }),
+              }}
+            />
             <ShareDialog
               note={parsedNote}
               onPublish={(gistId) => {
@@ -539,16 +404,28 @@ function NotePage() {
             {useBlockEditor ? (
               <div className="flex flex-col gap-3">
                 {!isDailyNote && !isWeeklyNote ? (
-                  <NoteTitle noteId={noteId ?? ""} onRename={renameTo} />
+                  <NoteTitle
+                    noteId={noteId ?? ""}
+                    onRename={renameTo}
+                    onArrowDown={(mode) => {
+                      setFocusFirstMode(mode)
+                      setFocusFirstSignal((n) => n + 1)
+                    }}
+                    onCreateBelow={() => setNewRootSignal((n) => n + 1)}
+                    focusSignal={titleFocusSignal}
+                  />
                 ) : null}
                 <BlockNoteEditor
                   key={noteId}
                   noteId={noteId}
                   value={editorValue}
                   onChange={setEditorValue}
-                  historyResetToken={saveEpoch}
                   startEditing={!note}
                   highlightHeading={highlightHeading}
+                  onExitTop={() => setTitleFocusSignal((n) => n + 1)}
+                  focusFirstSignal={focusFirstSignal}
+                  focusFirstMode={focusFirstMode}
+                  newRootSignal={newRootSignal}
                 />
               </div>
             ) : (

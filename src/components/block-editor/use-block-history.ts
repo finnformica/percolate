@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useRef } from "react"
 import { emptyHistory, record, redo, undo, type BlockOp } from "../../blocks/history"
 import type { BlockDoc } from "../../blocks/types"
 
@@ -7,15 +7,11 @@ import type { BlockDoc } from "../../blocks/types"
  *
  * - `commit(current, next, op)` records `current` then applies `next`.
  * - `undo()` / `redo()` restore a snapshot (and return it, or `null`).
- * - The history is cleared whenever `resetToken` changes — the editor passes
- *   a token that ticks on save, so undo can't reach behind a committed state.
+ * - The history lives for the editor's lifetime (it resets only when the note
+ *   changes and the editor remounts), so undo/redo keep working across saves.
  */
-export function useBlockHistory(onChange: (doc: BlockDoc) => void, resetToken: unknown) {
+export function useBlockHistory(onChange: (doc: BlockDoc) => void) {
   const historyRef = useRef(emptyHistory())
-
-  useEffect(() => {
-    historyRef.current = emptyHistory()
-  }, [resetToken])
 
   const commit = useCallback(
     (current: BlockDoc, next: BlockDoc, op: BlockOp) => {
