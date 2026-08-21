@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-W34
+
+### New
+
+- Past days in the calendar now show what you actually wrote that day, reconstructed from your Git history. It's a read-only view that merges every note you touched, with that day's note first — while today stays fully editable as before. Commit times are shown in your current timezone, and daily notes stay pinned to their date wherever in the world you open them.
+
+### Changed
+
+- Daily notes now use the same block/outline editor as the rest of your notes, and past days render their history as blocks too — one consistent editing and reading experience across the app.
+
 ## 2026-W08
 
 ### Improved
