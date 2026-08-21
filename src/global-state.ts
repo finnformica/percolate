@@ -16,6 +16,7 @@ import {
   templateSchema,
 } from "./schema"
 import { fs, fsWipe } from "./utils/fs"
+import { clearSession, seedSession } from "./utils/github-session"
 import {
   REPO_DIR,
   getRemoteOriginUrl,
@@ -307,6 +308,14 @@ function createGlobalStateMachine() {
           const login = searchParams.get("user_login")
           const name = searchParams.get("user_name")
           const email = searchParams.get("user_email")
+          // Only treat these as set when actually present and finite (a missing
+          // param is null → Number(null) is 0, which would look like "expired").
+          const toEpoch = (raw: string | null) => {
+            const n = raw != null ? Number(raw) : NaN
+            return Number.isFinite(n) ? n : undefined
+          }
+          const accessExpires = toEpoch(searchParams.get("access_expires"))
+          const refreshExpires = toEpoch(searchParams.get("refresh_expires"))
 
           if (token && login && name && email) {
             const idNumberRaw = id ? Number(id) : undefined
@@ -320,6 +329,8 @@ function createGlobalStateMachine() {
             searchParams.delete("user_login")
             searchParams.delete("user_name")
             searchParams.delete("user_email")
+            searchParams.delete("access_expires")
+            searchParams.delete("refresh_expires")
 
             window.history.replaceState(
               null,
@@ -329,7 +340,17 @@ function createGlobalStateMachine() {
               }`,
             )
 
-            return { githubUser: { token, id: idNumber, login, name, email } }
+            return {
+              githubUser: {
+                token,
+                id: idNumber,
+                login,
+                name,
+                email,
+                accessTokenExpiresAt: accessExpires,
+                refreshTokenExpiresAt: refreshExpires,
+              },
+            }
           }
 
           // Next, check localStorage for user metadata
@@ -472,9 +493,12 @@ function createGlobalStateMachine() {
           switch (event.type) {
             case "SIGN_IN":
               localStorage.setItem(GITHUB_USER_STORAGE_KEY, JSON.stringify(event.githubUser))
+              // Seed the live token session used for git auth + refresh.
+              seedSession(event.githubUser)
               break
             case "done.invoke.global.resolvingUser:invocation[0]":
               localStorage.setItem(GITHUB_USER_STORAGE_KEY, JSON.stringify(event.data.githubUser))
+              seedSession(event.data.githubUser)
               break
           }
         },
@@ -483,6 +507,7 @@ function createGlobalStateMachine() {
         }),
         clearGitHubUserLocalStorage: () => {
           localStorage.removeItem(GITHUB_USER_STORAGE_KEY)
+          clearSession()
         },
         setGitHubRepo: assign({
           githubRepo: (_, event) => {

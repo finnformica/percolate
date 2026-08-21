@@ -2,7 +2,15 @@ import git from "isomorphic-git"
 import http from "isomorphic-git/http/web"
 import { GitHubRepository, GitHubUser } from "../schema"
 import { fs, fsWipe } from "./fs"
+import { ensureFreshToken, getAccessToken, withAuthRetry } from "./github-session"
 import { startTimer } from "./timer"
+
+/** Basic-auth credentials for GitHub over HTTP. Reads the *live* access token
+ * from the session (which may have just been refreshed), falling back to the
+ * user's token for the very first call / dev PAT. */
+function authFor(user: GitHubUser) {
+  return () => ({ username: user.login, password: getAccessToken() ?? user.token })
+}
 
 export const REPO_DIR = "/repo"
 const DEFAULT_BRANCH = "main"
@@ -20,7 +28,7 @@ export async function gitClone(repo: GitHubRepository, user: GitHubUser) {
     depth: 1,
     onMessage: (message) => console.debug("onMessage", message),
     onProgress: (progress) => console.debug("onProgress", progress),
-    onAuth: () => ({ username: user.login, password: user.token }),
+    onAuth: authFor(user),
   }
 
   // Wipe file system
@@ -29,8 +37,9 @@ export async function gitClone(repo: GitHubRepository, user: GitHubUser) {
   fsWipe()
 
   // Clone repo
+  await ensureFreshToken()
   let stopTimer = startTimer(`git clone ${options.url} ${options.dir}`)
-  await git.clone(options)
+  await withAuthRetry(() => git.clone(options))
   stopTimer()
 
   // Set user in git config
@@ -53,11 +62,12 @@ export async function gitPull(user: GitHubUser) {
     singleBranch: true,
     onMessage: (message) => console.debug("onMessage", message),
     onProgress: (progress) => console.debug("onProgress", progress),
-    onAuth: () => ({ username: user.login, password: user.token }),
+    onAuth: authFor(user),
   }
 
+  await ensureFreshToken()
   const stopTimer = startTimer("git pull")
-  await git.pull(options)
+  await withAuthRetry(() => git.pull(options))
   stopTimer()
 }
 
@@ -69,11 +79,12 @@ export async function gitPush(user: GitHubUser) {
     corsProxy: "/cors-proxy",
     onMessage: (message) => console.debug("onMessage", message),
     onProgress: (progress) => console.debug("onProgress", progress),
-    onAuth: () => ({ username: user.login, password: user.token }),
+    onAuth: authFor(user),
   }
 
+  await ensureFreshToken()
   const stopTimer = startTimer("git push")
-  await git.push(options)
+  await withAuthRetry(() => git.push(options))
   stopTimer()
 }
 

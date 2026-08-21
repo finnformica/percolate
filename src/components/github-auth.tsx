@@ -4,6 +4,27 @@ import { globalStateMachineAtom } from "../global-state"
 import { Button, ButtonProps } from "./button"
 import { GitHubIcon16 } from "./icons"
 
+/**
+ * Kick off the GitHub OAuth flow (also used to re-authenticate from the sync
+ * status when the session has expired). `state` carries the current URL so the
+ * worker redirects back here after the token exchange.
+ */
+export function beginGitHubSignIn() {
+  const authUrl = urlcat("https://github.com/login/oauth/authorize", {
+    client_id: import.meta.env.VITE_GITHUB_CLIENT_ID,
+    state: window.location.href,
+    scope: "repo,gist,user:email",
+  })
+
+  // Open in new tab if in iframe (GitHub doesn't load inside iframes)
+  const isInIframe = window.self !== window.top
+  if (isInIframe) {
+    window.open(authUrl, "_blank", "noopener")
+  } else {
+    window.location.href = authUrl
+  }
+}
+
 export function SignInButton(props: ButtonProps) {
   const send = useSetAtom(globalStateMachineAtom)
   return (
@@ -23,20 +44,7 @@ export function SignInButton(props: ButtonProps) {
           return
         }
 
-        const authUrl = urlcat("https://github.com/login/oauth/authorize", {
-          client_id: import.meta.env.VITE_GITHUB_CLIENT_ID,
-          state: window.location.href,
-          scope: "repo,gist,user:email",
-        })
-
-        // Open in new tab if in iframe (GitHub doesn't load inside iframes)
-        const isInIframe = window.self !== window.top
-        if (isInIframe) {
-          window.open(authUrl, "_blank", "noopener")
-        } else {
-          window.location.href = authUrl
-        }
-
+        beginGitHubSignIn()
         props.onClick?.(event)
       }}
     >
