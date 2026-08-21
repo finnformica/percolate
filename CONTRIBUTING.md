@@ -6,13 +6,13 @@
 
     ```shell
     # HTTPS
-    git clone https://github.com/lumen-notes/lumen.git
+    git clone https://github.com/finnformica/ruminate.git
 
     # SSH
-    git clone git@github.com:lumen-notes/lumen.git
+    git clone git@github.com:finnformica/ruminate.git
 
     # GitHub CLI
-    gh repo clone lumen-notes/lumen
+    gh repo clone finnformica/ruminate
     ```
 
 1.  Generate a GitHub [personal access token (classic)](https://github.com/settings/tokens/new) with `repo`, `gist`, and `user:email` scopes, or a [fine-grained personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token) scoped to a specific repository with the additional read-only email scope and gist, then add it to a `.env.local` file in the root directory:
@@ -42,7 +42,7 @@
 ```mermaid
 graph
     subgraph local[Local machine]
-      subgraph app.uselumen.com
+      subgraph ruminate[Ruminate web app]
         state-machine([state machine])
         isomorphic-git[isomorphic-git]
         lightning-fs[lightning-fs]

@@ -1,14 +1,8 @@
-import { useAtomValue, useSetAtom } from "jotai"
+import { useAtomValue } from "jotai"
 import { selectAtom, useAtomCallback } from "jotai/utils"
 import React from "react"
-import {
-  backlinksIndexAtom,
-  githubRepoAtom,
-  githubUserAtom,
-  globalStateMachineAtom,
-  markdownFilesAtom,
-  notesAtom,
-} from "../global-state"
+import { backlinksIndexAtom, githubRepoAtom, githubUserAtom, notesAtom } from "../global-state"
+import { useDeleteNoteFile, useGetNoteContents, useWriteNotes } from "../data/store"
 import { Note, NoteId } from "../schema"
 import { parseFrontmatter, updateFrontmatterValue } from "../utils/frontmatter"
 import { deleteGist, updateGist } from "../utils/gist"
@@ -51,7 +45,7 @@ export function useBacklinksForId(id: NoteId | undefined) {
 }
 
 export function useSaveNote() {
-  const send = useSetAtom(globalStateMachineAtom)
+  const writeNotes = useWriteNotes()
   const githubUser = useAtomValue(githubUserAtom)
   const githubRepo = useAtomValue(githubRepoAtom)
   const getNotes = useAtomCallback(React.useCallback((get) => get(notesAtom), []))
@@ -64,10 +58,7 @@ export function useSaveNote() {
         properties: { updated_at: new Date() },
       })
 
-      send({
-        type: "WRITE_FILES",
-        markdownFiles: { [`${id}.md`]: contentWithTimestamp },
-      })
+      writeNotes({ [id]: contentWithTimestamp })
 
       // If the note has a gist ID, update the gist
       const { frontmatter } = parseFrontmatter(contentWithTimestamp)
@@ -81,7 +72,7 @@ export function useSaveNote() {
         })
       }
     },
-    [send, githubUser, githubRepo, getNotes],
+    [writeNotes, githubUser, githubRepo, getNotes],
   )
 
   return saveNote
@@ -92,16 +83,14 @@ type RenameNoteResult =
   | { success: false; reason: "duplicate" | "invalid" | "no-op" }
 
 export function useRenameNote() {
-  const getMarkdownFiles = useAtomCallback(React.useCallback((get) => get(markdownFilesAtom), []))
-  const send = useSetAtom(globalStateMachineAtom)
+  const getNoteContents = useGetNoteContents()
+  const writeNotes = useWriteNotes()
 
   return React.useCallback(
     (params: { oldName: string; newName: string; content: string }): RenameNoteResult => {
       const { oldName, newName, content } = params
 
-      const markdownFiles = getMarkdownFiles()
-      const oldFilepath = `${oldName}.md`
-      const newFilepath = `${newName}.md`
+      const noteContents = getNoteContents()
 
       // Guard against no-op renames
       if (!oldName || !newName || oldName === newName) {
@@ -112,50 +101,50 @@ export function useRenameNote() {
         return { success: false, reason: "invalid" }
       }
 
-      // Prevent overwriting an existing file
-      if (newFilepath !== oldFilepath && markdownFiles[newFilepath]) {
+      // Prevent overwriting an existing note
+      if (noteContents[newName]) {
         return { success: false, reason: "duplicate" }
       }
 
-      const oldFileExists = Object.prototype.hasOwnProperty.call(markdownFiles, oldFilepath)
+      const oldNoteExists = Object.prototype.hasOwnProperty.call(noteContents, oldName)
 
-      const updatedMarkdownFiles: Record<string, string | null> = {}
+      const updates: Record<string, string | null> = {}
 
       // Update wikilinks in all other notes
-      for (const [filepath, content] of Object.entries(markdownFiles)) {
-        if (filepath === oldFilepath) continue
-        const newContent = updateWikilinks({ fileContent: content, oldId: oldName, newId: newName })
-        if (newContent !== content) {
-          updatedMarkdownFiles[filepath] = newContent
+      for (const [id, noteContent] of Object.entries(noteContents)) {
+        if (id === oldName) continue
+        const newContent = updateWikilinks({
+          fileContent: noteContent,
+          oldId: oldName,
+          newId: newName,
+        })
+        if (newContent !== noteContent) {
+          updates[id] = newContent
         }
       }
 
-      // Write the renamed file and mark the old path for deletion
-      updatedMarkdownFiles[newFilepath] = updateWikilinks({
+      // Write the renamed note and mark the old id for deletion
+      updates[newName] = updateWikilinks({
         fileContent: content,
         oldId: oldName,
         newId: newName,
       })
-      if (oldFileExists) {
-        updatedMarkdownFiles[oldFilepath] = null
+      if (oldNoteExists) {
+        updates[oldName] = null
       }
 
-      if (Object.keys(updatedMarkdownFiles).length > 0) {
-        send({
-          type: "WRITE_FILES",
-          markdownFiles: updatedMarkdownFiles,
-          commitMessage: `Rename note ${oldName} to ${newName}`,
-        })
+      if (Object.keys(updates).length > 0) {
+        writeNotes(updates, `Rename note ${oldName} to ${newName}`)
       }
 
       return { success: true }
     },
-    [getMarkdownFiles, send],
+    [getNoteContents, writeNotes],
   )
 }
 
 export function useDeleteNote() {
-  const send = useSetAtom(globalStateMachineAtom)
+  const deleteNoteFile = useDeleteNoteFile()
   const githubUser = useAtomValue(githubUserAtom)
   const getNoteById = useAtomCallback(
     React.useCallback((get, set, id: NoteId) => {
@@ -175,9 +164,9 @@ export function useDeleteNote() {
         })
       }
 
-      send({ type: "DELETE_FILE", filepath: `${id}.md` })
+      deleteNoteFile(id)
     },
-    [send, githubUser, getNoteById],
+    [deleteNoteFile, githubUser, getNoteById],
   )
 
   return deleteNote

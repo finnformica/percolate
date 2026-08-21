@@ -31,6 +31,7 @@ import { parseNote } from "./utils/parse-note"
 import { removeTemplateFrontmatter } from "./utils/remove-template-frontmatter"
 import { getSampleMarkdownFiles } from "./utils/sample-markdown-files"
 import { startTimer } from "./utils/timer"
+import { VIEW_STATE_PATH } from "./data/paths"
 
 // -----------------------------------------------------------------------------
 // State machine
@@ -585,8 +586,8 @@ async function getMarkdownFilesFromFs(dir: string) {
       // Ignore .git directory
       if (filepath.startsWith(".git")) return
 
-      // Ignore non-markdown files
-      if (!filepath.endsWith(".md")) return
+      // Keep markdown notes and the view-state sidecar; ignore everything else.
+      if (!filepath.endsWith(".md") && filepath !== VIEW_STATE_PATH) return
 
       // Get file content
       const content = await entry.content()
@@ -651,8 +652,10 @@ export const notesAtom = atom((get) => {
   const markdownFiles = get(markdownFilesAtom)
   const notes: Map<NoteId, Note> = new Map()
 
-  // Parse notes
+  // Parse notes. Non-`.md` tracked files (e.g. the view-state sidecar) are not
+  // notes and are skipped here.
   for (const filepath in markdownFiles) {
+    if (!filepath.endsWith(".md")) continue
     const id = filepath.replace(/\.md$/, "")
     const content = markdownFiles[filepath]
     notes.set(id, parseNote(id, content))

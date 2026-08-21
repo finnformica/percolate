@@ -19,7 +19,7 @@ read: true
 
 ## Recognized keys
 
-Frontmatter can contain any valid YAML key-value pairs. However, there are a few keys that Lumen recognizes and uses to enhance the user interface:
+Frontmatter can contain any valid YAML key-value pairs. However, there are a few keys that Ruminate recognizes and uses to enhance the user interface:
 
 | Key        | Description                        | Enhancements                                                                                                                                                                            |
 | :--------- | :--------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

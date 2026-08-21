@@ -70,6 +70,31 @@ describe("block round-trip", () => {
   })
 })
 
+describe("duplicate ids", () => {
+  it("keeps both blocks when an id:: is duplicated (no clobber)", () => {
+    // Two top-level blocks share `id:: blk_dup` — e.g. a block copy-pasted with
+    // its id line in an external editor. Both must survive as distinct blocks.
+    const doc = parse(`first\n  id:: blk_dup\nsecond\n  id:: blk_dup\n`)
+    expect(doc.rootBlockIds).toHaveLength(2)
+    expect(Object.keys(doc.blocks)).toHaveLength(2)
+    const [firstId, secondId] = doc.rootBlockIds
+    expect(firstId).not.toBe(secondId)
+    expect(doc.rootBlockIds.map((id) => doc.blocks[id].content)).toEqual(["first", "second"])
+    // The first occurrence keeps the on-disk id; the duplicate is regenerated.
+    expect(firstId).toBe("blk_dup")
+    expect(secondId).toMatch(/^blk_[0-9a-z]{10}$/)
+  })
+
+  it("regenerates duplicate ids among siblings under one parent", () => {
+    const doc = parse(`parent\n  id:: blk_p\n  a\n    id:: blk_c\n  b\n    id:: blk_c\n`)
+    const children = doc.blocks["blk_p"].children
+    expect(children).toHaveLength(2)
+    expect(children[0]).not.toBe(children[1])
+    expect(doc.blocks[children[0]].content).toBe("a")
+    expect(doc.blocks[children[1]].content).toBe("b")
+  })
+})
+
 describe("frontmatter handling", () => {
   it("returns null frontmatter when there is none", () => {
     const doc = parse(`just a block\n  id:: blk_x\n`)
