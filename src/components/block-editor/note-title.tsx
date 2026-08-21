@@ -19,12 +19,15 @@ export function NoteTitle({
   noteId,
   onRename,
   onArrowDown,
+  onCreateBelow,
   focusSignal,
 }: {
   noteId: string
   onRename: (name: string) => boolean
   /** Down-arrow while the title is selected returns focus to the editor. */
   onArrowDown?: () => void
+  /** Cmd/Shift+Enter while the title is selected adds a new root block. */
+  onCreateBelow?: () => void
   /** Bump to select the title from the keyboard (arrow-up past the first block). */
   focusSignal?: number
 }) {
@@ -122,7 +125,12 @@ export function NoteTitle({
             setEditing(true)
           }}
           onKeyDown={(event) => {
-            if (event.key === "Enter") {
+            if (event.key === "Enter" && (event.metaKey || event.ctrlKey || event.shiftKey)) {
+              // Cmd/Shift+Enter: create a new root block below the title.
+              event.preventDefault()
+              setSelected(false)
+              onCreateBelow?.()
+            } else if (event.key === "Enter") {
               event.preventDefault()
               setEditing(true)
             } else if (event.key === "ArrowDown") {

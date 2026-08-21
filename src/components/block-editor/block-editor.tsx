@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import type { ClipboardEvent, KeyboardEvent } from "react"
 import type { BlockDoc } from "../../blocks/types"
 import { getBlockType, stripMarker } from "../../blocks/block-type"
@@ -13,6 +13,7 @@ import {
 import { resolveKey, type KeyLike } from "../../blocks/keymap"
 import { parse } from "../../blocks/parse"
 import {
+  emptyBlock,
   indentBlock,
   outdentBlock,
   removeBlock,
@@ -20,6 +21,7 @@ import {
   spliceBlocks,
   updateContent,
 } from "../../blocks/ops"
+import { copyAsMarkdown } from "../../utils/copy-markdown"
 import { BlockItem, type BlockEditorApi, type FocusRequest } from "./block-item"
 import { useBlockHistory } from "./use-block-history"
 
@@ -47,6 +49,25 @@ function findHeadingBlockId(doc: BlockDoc, heading: string): string | null {
   return found
 }
 
+/** The first block (in document order) present in `restored` but not in
+ * `current` — the block an undo brought back, e.g. after a delete. */
+function findReappeared(current: BlockDoc, restored: BlockDoc): string | null {
+  let found: string | null = null
+  const walk = (ids: string[]) => {
+    for (const id of ids) {
+      if (found) return
+      if (!(id in current.blocks)) {
+        found = id
+        return
+      }
+      const block = restored.blocks[id]
+      if (block) walk(block.children)
+    }
+  }
+  walk(restored.rootBlockIds)
+  return found
+}
+
 /**
  * A controlled block outliner. `doc` is owned by the caller (which serializes
  * and saves it); this component manages only transient UI state and emits new
@@ -69,6 +90,7 @@ export function BlockEditor({
   onToggleCollapse,
   onExitTop,
   focusFirstSignal,
+  newRootSignal,
   readOnly = false,
 }: {
   doc: BlockDoc
@@ -89,6 +111,8 @@ export function BlockEditor({
   onExitTop?: () => void
   /** Bump this (e.g. Down-arrow from the note title) to focus the first block. */
   focusFirstSignal?: number
+  /** Bump this (e.g. Cmd+Enter on the note title) to add a new root block. */
+  newRootSignal?: number
   /** Display-only: renders blocks without any editing (e.g. past-day history). */
   readOnly?: boolean
 }) {
@@ -226,7 +250,8 @@ export function BlockEditor({
     return lines.join("\n")
   }
   const copySelection = () => {
-    void navigator.clipboard?.writeText(selectionMarkdown())
+    // Route through the shared copy path so it's clean display markdown.
+    copyAsMarkdown(selectionMarkdown())
   }
   const cutSelection = () => {
     copySelection()
@@ -245,6 +270,24 @@ export function BlockEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusFirstSignal])
 
+  // When the caller bumps `newRootSignal` (e.g. Cmd+Enter on the note title),
+  // add a fresh root block at the top and edit it.
+  useEffect(() => {
+    if (!newRootSignal || readOnly) return
+    const current = docRef.current
+    const fresh = emptyBlock()
+    const next: BlockDoc = {
+      ...current,
+      rootBlockIds: [fresh.id, ...current.rootBlockIds],
+      blocks: { ...current.blocks, [fresh.id]: fresh },
+    }
+    history.commit(current, next, { type: "structural" })
+    setAnchorId(null)
+    setSelected(fresh.id)
+    setFocus({ id: fresh.id })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newRootSignal])
+
   const edit = (id: string, atStart = false) => {
     if (readOnly) return
     setAnchorId(null)
@@ -256,6 +299,14 @@ export function BlockEditor({
   // still exists; otherwise fall back to select mode on a valid block.
   const reconcileToDoc = (restored: BlockDoc) => {
     setAnchorId(null)
+    // If a block reappeared (e.g. undo of a delete), highlight it so the thing
+    // you brought back is where your focus lands.
+    const reappeared = findReappeared(doc, restored)
+    if (reappeared) {
+      setFocus(null)
+      setSelected(reappeared)
+      return
+    }
     setFocus((cur) => (cur && restored.blocks[cur.id] ? cur : null))
     setSelected((cur) => (cur && restored.blocks[cur] ? cur : (restored.rootBlockIds[0] ?? null)))
   }
@@ -330,17 +381,10 @@ export function BlockEditor({
     focus,
     selected,
     selectedSet,
-    selectionCount: selectedIds.length,
     collapsed,
     readOnly,
     select,
     edit,
-    extendSelection,
-    indentSelection,
-    outdentSelection,
-    removeSelection,
-    copySelection,
-    cutSelection,
     toggleCollapse,
     setFocus,
     onContentChange: (id, content) =>
@@ -362,28 +406,67 @@ export function BlockEditor({
     dispatchKey,
   }
 
+  // The container is the single keyboard target for select mode (see the focus
+  // effect below). Edit mode is handled by the focused textarea inside the
+  // block; those events also bubble here, so we bail while editing.
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     // Cmd/Ctrl+Z undoes, Cmd/Ctrl+Shift+Z (or Ctrl+Y) redoes — at the document
-    // level, overriding the browser's per-textarea native undo so a single
-    // keystroke can walk back changes that spanned multiple blocks.
+    // level, so a single keystroke can walk back changes across many blocks.
     if (event.metaKey || event.ctrlKey) {
       const key = event.key.toLowerCase()
       if (key === "z" && !event.shiftKey) {
         if (undo()) event.preventDefault()
-      } else if ((key === "z" && event.shiftKey) || key === "y") {
-        if (redo()) event.preventDefault()
+        return
       }
+      if ((key === "z" && event.shiftKey) || key === "y") {
+        if (redo()) event.preventDefault()
+        return
+      }
+      // other Cmd combos (Cmd+Enter, Cmd+Arrow, Cmd+C/X) fall through below
+    }
+
+    // Edit mode: the textarea's own handler owns the keys; don't double-handle.
+    if (focus || !selected || event.defaultPrevented) return
+    const id = selected
+
+    // Shift+Arrow grows / shrinks a multi-block selection.
+    if (event.shiftKey && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+      event.preventDefault()
+      extendSelection(event.key === "ArrowUp" ? "up" : "down")
       return
     }
-    // Safety net: when a block is highlighted but its element has lost DOM focus,
-    // arrow / space keys would scroll the page instead of moving the highlight.
-    // If the block's own handler didn't already consume the event, run the
-    // select-mode command here (which also re-focuses the block).
-    if (!focus && selected && !event.defaultPrevented) {
-      if (event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === " ") {
-        if (dispatchKey("select", selected, event)) event.preventDefault()
+    // Actions on a multi-block selection.
+    if (selectedIds.length > 1) {
+      const mod = event.metaKey || event.ctrlKey
+      if (event.key === "Tab") {
+        event.preventDefault()
+        if (event.shiftKey) outdentSelection()
+        else indentSelection()
+        return
+      }
+      if (event.key === "Backspace" || event.key === "Delete") {
+        event.preventDefault()
+        removeSelection()
+        return
+      }
+      if (mod && event.key.toLowerCase() === "c") {
+        event.preventDefault()
+        copySelection()
+        return
+      }
+      if (mod && event.key.toLowerCase() === "x") {
+        event.preventDefault()
+        cutSelection()
+        return
+      }
+      if (event.key === "Escape") {
+        event.preventDefault()
+        select(id)
+        return
       }
     }
+    // Single-select: resolve through the keymap.
+    if (dispatchKey("select", id, event)) event.preventDefault()
   }
 
   // Copying a selection that spans blocks yields the *markdown* (markers and
@@ -391,6 +474,20 @@ export function BlockEditor({
   // it) and carries structure elsewhere. A selection within one block keeps
   // the browser's default (the plain selected text).
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Keep the container focused whenever a block is highlighted (select mode), so
+  // arrow keys always move the highlight instead of scrolling the page — even
+  // after a structural change or after focus drifted to a non-interactive spot.
+  // Edit mode is left alone (the textarea owns focus). `preventScroll` stops the
+  // focus call from jumping the page around on every doc change.
+  useLayoutEffect(() => {
+    if (readOnly || focus || !selected) return
+    const el = containerRef.current
+    if (!el) return
+    if (!el.contains(document.activeElement)) el.focus({ preventScroll: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, focus, anchorId, doc, readOnly])
+
   const handleCopy = (event: ClipboardEvent<HTMLDivElement>) => {
     const selection = window.getSelection()
     if (!selection || selection.isCollapsed) return
@@ -417,8 +514,17 @@ export function BlockEditor({
   }
 
   return (
+    // The container holds keyboard focus for select mode (tabIndex -1 = focusable
+    // only programmatically), so arrows/shortcuts work no matter which block is
+    // highlighted. outline-none hides the focus ring on the wrapper itself.
     // eslint-disable-next-line jsx-a11y/no-static-element-interactions
-    <div className="space-y-0.5" ref={containerRef} onKeyDown={handleKeyDown} onCopy={handleCopy}>
+    <div
+      className="space-y-0.5 outline-none"
+      ref={containerRef}
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+      onCopy={handleCopy}
+    >
       {doc.rootBlockIds.map((id) => {
         const block = doc.blocks[id]
         if (!block) return null

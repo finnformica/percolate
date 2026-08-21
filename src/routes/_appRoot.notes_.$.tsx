@@ -170,6 +170,7 @@ function NotePage() {
   // title bumps focusFirstSignal to move back into the first block (arrow down).
   const [focusFirstSignal, setFocusFirstSignal] = useState(0)
   const [titleFocusSignal, setTitleFocusSignal] = useState(0)
+  const [newRootSignal, setNewRootSignal] = useState(0)
 
   // Actions
   const renameNote = useRenameNote()
@@ -403,6 +404,7 @@ function NotePage() {
                     noteId={noteId ?? ""}
                     onRename={renameTo}
                     onArrowDown={() => setFocusFirstSignal((n) => n + 1)}
+                    onCreateBelow={() => setNewRootSignal((n) => n + 1)}
                     focusSignal={titleFocusSignal}
                   />
                 ) : null}
@@ -415,6 +417,7 @@ function NotePage() {
                   highlightHeading={highlightHeading}
                   onExitTop={() => setTitleFocusSignal((n) => n + 1)}
                   focusFirstSignal={focusFirstSignal}
+                  newRootSignal={newRootSignal}
                 />
               </div>
             ) : (

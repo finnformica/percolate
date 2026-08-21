@@ -250,7 +250,7 @@ describe("split", () => {
     expect(result.focus).toEqual({ mode: "edit", id, atStart: true })
   })
 
-  it("shift-enter splits into a plain paragraph (no marker carried)", () => {
+  it("shift-enter splits carrying the same block type", () => {
     const doc: BlockDoc = {
       frontmatter: null,
       rootBlockIds: ["x"],
@@ -262,7 +262,21 @@ describe("split", () => {
     )
     const id = newBlockId(doc, result.doc!)
     expect(result.doc!.blocks.x.content).toBe("- he")
-    expect(result.doc!.blocks[id].content).toBe("llo")
+    expect(result.doc!.blocks[id].content).toBe("- llo")
+  })
+
+  it("shift-enter on a heading makes another heading", () => {
+    const doc: BlockDoc = {
+      frontmatter: null,
+      rootBlockIds: ["x"],
+      blocks: { x: { id: "x", content: "# Title", children: [] } },
+    }
+    const result = runCommand(
+      "splitPlain",
+      input(doc, "x", { mode: "edit", visibleOrder: ["x"], caret: caret("Title", 5) }),
+    )
+    const id = newBlockId(doc, result.doc!)
+    expect(result.doc!.blocks[id].content).toBe("# ")
   })
 })
 

@@ -104,6 +104,25 @@ function continuationMarker(type: BlockType): string {
   }
 }
 
+/** The marker for a new block of the *same* type as `type` — used by Shift-Enter
+ * so a heading splits into a heading, a quote into a quote, and so on. */
+function sameTypeMarker(type: BlockType): string {
+  switch (type.kind) {
+    case "heading":
+      return "# "
+    case "todo":
+      return "[ ] "
+    case "ordered":
+      return `${type.number + 1}. `
+    case "quote":
+      return "> "
+    case "bullet":
+      return "- "
+    default:
+      return ""
+  }
+}
+
 /** Keep the current block focused, in whichever mode we're already in. */
 function keepFocus(mode: Mode, id: string): FocusIntent {
   return mode === "edit" ? { mode: "edit", id } : { mode: "select", id }
@@ -150,9 +169,9 @@ function moveEditFocus(direction: "up" | "down"): Command {
   }
 }
 
-/** Split the block at the caret, giving the trailing text `marker` (a list
- * continuation for Enter, nothing for a plain Shift-Enter line break). */
-function splitAtCaret(continueList: boolean): Command {
+/** Split the block at the caret; `markerFor` decides the new block's marker —
+ * a list continuation for Enter, the same type for Shift-Enter. */
+function splitAtCaret(markerFor: (type: BlockType) => string): Command {
   return ({ doc, id, caret }) => {
     if (!caret) return IGNORED
     const content = doc.blocks[id]?.content ?? ""
@@ -160,9 +179,8 @@ function splitAtCaret(continueList: boolean): Command {
     const prefix = markerPrefix(content)
     const before = caret.value.slice(0, caret.start)
     const after = caret.value.slice(caret.end)
-    const marker = continueList ? continuationMarker(type) : ""
     const updated = updateContent(doc, id, prefix + before)
-    const fresh = emptyBlock(marker + after)
+    const fresh = emptyBlock(markerFor(type) + after)
     const next = insertAfter(updated, id, fresh)
     return {
       handled: true,
@@ -306,8 +324,9 @@ export const COMMANDS: Record<CommandName, Command> = {
     return { handled: true, doc: next, op: STRUCTURAL, focus: { mode: "edit", id: fresh.id } }
   },
 
-  splitContinuingList: splitAtCaret(true),
-  splitPlain: splitAtCaret(false),
+  splitContinuingList: splitAtCaret(continuationMarker),
+  // Shift-Enter keeps the current block's type for the new block.
+  splitPlain: splitAtCaret(sameTypeMarker),
 
   /** Enter on an empty list item exits the list (becomes a paragraph). */
   exitList: ({ doc, id }) => ({

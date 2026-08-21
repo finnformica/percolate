@@ -28,8 +28,6 @@ export interface BlockEditorApi {
   selected: string | null
   /** All highlighted block ids (a Shift+Arrow range, or just the head). */
   selectedSet: Set<string>
-  /** How many blocks are selected (1 = single). */
-  selectionCount: number
   collapsed: Set<string>
   /** Display-only: no editing, selection, or mutation (collapse still works). */
   readOnly?: boolean
@@ -37,14 +35,6 @@ export interface BlockEditorApi {
   select: (id: string) => void
   /** Enter edit mode for a block. */
   edit: (id: string, atStart?: boolean) => void
-  /** Extend the multi-block selection by one along the visible order. */
-  extendSelection: (direction: "up" | "down") => void
-  /** Act on the whole current selection. */
-  indentSelection: () => void
-  outdentSelection: () => void
-  removeSelection: () => void
-  copySelection: () => void
-  cutSelection: () => void
   toggleCollapse: (id: string) => void
   setFocus: (focus: FocusRequest | null) => void
   onContentChange: (id: string, content: string) => void
@@ -121,7 +111,6 @@ export function BlockItem({
   const hasChildren = block.children.length > 0
   const isCollapsed = api.collapsed.has(block.id)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const viewRef = useRef<HTMLDivElement>(null)
   const pendingCaret = useRef<number | null>(null)
 
   const type = getBlockType(block.content)
@@ -162,11 +151,6 @@ export function BlockItem({
       el.setSelectionRange(pos, pos)
     }
   }, [editing, block.content])
-
-  // Give the block keyboard focus while it's the highlighted (selected) one.
-  useLayoutEffect(() => {
-    if (selected) viewRef.current?.focus()
-  }, [selected])
 
   const handleTextareaChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     const el = event.currentTarget
@@ -215,46 +199,6 @@ export function BlockItem({
     const before = el.value.slice(0, el.selectionStart)
     const after = el.value.slice(el.selectionEnd)
     api.onPaste(block.id, prefix, before, normalized, after)
-  }
-
-  const handleSelectKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    // Shift+Arrow grows/shrinks a multi-block selection.
-    if (event.shiftKey && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
-      event.preventDefault()
-      api.extendSelection(event.key === "ArrowUp" ? "up" : "down")
-      return
-    }
-    // Actions that operate on the whole selection when more than one is picked.
-    if (api.selectionCount > 1) {
-      const mod = event.metaKey || event.ctrlKey
-      if (event.key === "Tab") {
-        event.preventDefault()
-        if (event.shiftKey) api.outdentSelection()
-        else api.indentSelection()
-        return
-      }
-      if (event.key === "Backspace" || event.key === "Delete") {
-        event.preventDefault()
-        api.removeSelection()
-        return
-      }
-      if (mod && event.key.toLowerCase() === "c") {
-        event.preventDefault()
-        api.copySelection()
-        return
-      }
-      if (mod && event.key.toLowerCase() === "x") {
-        event.preventDefault()
-        api.cutSelection()
-        return
-      }
-      if (event.key === "Escape") {
-        event.preventDefault()
-        api.select(block.id)
-        return
-      }
-    }
-    if (api.dispatchKey("select", block.id, event)) event.preventDefault()
   }
 
   const marker =
@@ -339,8 +283,10 @@ export function BlockItem({
                 )}
               />
             ) : (
+              // Keyboard for select mode is handled by the editor container (it
+              // holds focus); this element only needs the pointer interactions.
+              // eslint-disable-next-line jsx-a11y/no-static-element-interactions
               <div
-                ref={viewRef}
                 data-testid="block-body"
                 data-block-id={block.id}
                 className={cx(
@@ -352,11 +298,8 @@ export function BlockItem({
                 {...(readOnly
                   ? {}
                   : {
-                      role: "button" as const,
-                      tabIndex: 0,
                       onClick: () => api.select(block.id),
                       onDoubleClick: () => api.edit(block.id),
-                      onKeyDown: handleSelectKeyDown,
                     })}
               >
                 <BlockContent content={body} doc={doc} />

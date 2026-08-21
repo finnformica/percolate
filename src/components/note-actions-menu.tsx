@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "@tanstack/react-router"
 import copy from "copy-to-clipboard"
 import { useAtomValue } from "jotai"
 import { githubRepoAtom, isSignedOutAtom } from "../global-state"
+import { copyAsMarkdown } from "../utils/copy-markdown"
 import { useDeleteNote, useRenameNote, useSaveNote } from "../hooks/note"
 import type { Width } from "../schema"
 import { cx } from "../utils/cx"
@@ -187,7 +188,7 @@ export function NoteActionsMenu({
         >
           {pinned ? "Unpin" : "Pin"}
         </DropdownMenu.Item>
-        <DropdownMenu.Item icon={<CopyIcon16 />} onClick={() => copy(content)}>
+        <DropdownMenu.Item icon={<CopyIcon16 />} onClick={() => copyAsMarkdown(content)}>
           Copy markdown
         </DropdownMenu.Item>
         <DropdownMenu.Item icon={<CopyIcon16 />} onClick={() => copy(noteId)}>
