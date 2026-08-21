@@ -105,6 +105,13 @@ export function NoteTitle({
               setValue(noteId)
               setEditing(false)
               setSelected(true)
+            } else if (event.key === "ArrowDown") {
+              // The title is a single line, so Down drops into the editor below.
+              event.preventDefault()
+              commit()
+              setEditing(false)
+              setSelected(false)
+              onArrowDown?.()
             }
           }}
           spellCheck={false}

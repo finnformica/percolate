@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
-import type { ClipboardEvent, KeyboardEvent } from "react"
+import type { ClipboardEvent, FocusEvent, KeyboardEvent } from "react"
 import type { BlockDoc } from "../../blocks/types"
 import { getBlockType, stripMarker } from "../../blocks/block-type"
 import {
@@ -129,6 +129,12 @@ export function BlockEditor({
   const [anchorId, setAnchorId] = useState<string | null>(null)
   const history = useBlockHistory(onChange)
 
+  // The container is the focusable keyboard target for select mode.
+  const containerRef = useRef<HTMLDivElement>(null)
+  const focusContainer = () => {
+    if (!readOnly) containerRef.current?.focus({ preventScroll: true })
+  }
+
   // Re-highlight when the target heading changes (Cmd-K into the open note).
   // Reads the latest doc via a ref so this only runs on heading changes.
   const docRef = useRef(doc)
@@ -175,6 +181,9 @@ export function BlockEditor({
     setFocus(null)
     setAnchorId(null)
     setSelected(id)
+    // Grab keyboard focus so arrows work immediately, even re-clicking the block
+    // that's already highlighted (which wouldn't trigger the focus effect).
+    focusContainer()
   }
 
   // Extend the multi-selection by moving the head one block along, keeping the
@@ -428,16 +437,28 @@ export function BlockEditor({
     // Edit mode: the textarea's own handler owns the keys; don't double-handle.
     if (focus || !selected || event.defaultPrevented) return
     const id = selected
+    const mod = event.metaKey || event.ctrlKey
 
-    // Shift+Arrow grows / shrinks a multi-block selection.
-    if (event.shiftKey && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+    // Shift+Arrow grows / shrinks a multi-block selection — but NOT when Cmd/Ctrl
+    // is also held (that's the move-block shortcut, handled via the keymap).
+    if (event.shiftKey && !mod && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
       event.preventDefault()
       extendSelection(event.key === "ArrowUp" ? "up" : "down")
       return
     }
-    // Actions on a multi-block selection.
+    // Copy / cut the current selection — one block or many.
+    if (mod && event.key.toLowerCase() === "c") {
+      event.preventDefault()
+      copySelection()
+      return
+    }
+    if (mod && event.key.toLowerCase() === "x") {
+      event.preventDefault()
+      cutSelection()
+      return
+    }
+    // Actions that only make sense on a multi-block selection.
     if (selectedIds.length > 1) {
-      const mod = event.metaKey || event.ctrlKey
       if (event.key === "Tab") {
         event.preventDefault()
         if (event.shiftKey) outdentSelection()
@@ -449,16 +470,6 @@ export function BlockEditor({
         removeSelection()
         return
       }
-      if (mod && event.key.toLowerCase() === "c") {
-        event.preventDefault()
-        copySelection()
-        return
-      }
-      if (mod && event.key.toLowerCase() === "x") {
-        event.preventDefault()
-        cutSelection()
-        return
-      }
       if (event.key === "Escape") {
         event.preventDefault()
         select(id)
@@ -468,12 +479,6 @@ export function BlockEditor({
     // Single-select: resolve through the keymap.
     if (dispatchKey("select", id, event)) event.preventDefault()
   }
-
-  // Copying a selection that spans blocks yields the *markdown* (markers and
-  // nesting), not just the rendered text — so it round-trips (paste re-parses
-  // it) and carries structure elsewhere. A selection within one block keeps
-  // the browser's default (the plain selected text).
-  const containerRef = useRef<HTMLDivElement>(null)
 
   // Keep the container focused whenever a block is highlighted (select mode), so
   // arrow keys always move the highlight instead of scrolling the page — even
@@ -487,6 +492,35 @@ export function BlockEditor({
     if (!el.contains(document.activeElement)) el.focus({ preventScroll: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, focus, anchorId, doc, readOnly])
+
+  // Keep the highlighted block in a comfortable band (roughly the middle) as it
+  // moves, since focusing the container itself no longer scrolls it into view.
+  useLayoutEffect(() => {
+    if (readOnly || focus || !selected) return
+    const el = containerRef.current?.querySelector<HTMLElement>(`[data-block-row="${selected}"]`)
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const vh = window.innerHeight || document.documentElement.clientHeight
+    // Only scroll when it drifts out of the middle ~60% — small moves don't jump.
+    if (rect.top < vh * 0.2 || rect.bottom > vh * 0.8) {
+      if (typeof el.scrollIntoView === "function")
+        el.scrollIntoView({ block: "center", behavior: "auto" })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, focus, readOnly])
+
+  // When focus falls to nothing (a click on empty page space) while a block is
+  // still highlighted, keep the keyboard alive by re-grabbing focus. A click on
+  // a real control elsewhere (relatedTarget set) is left to take focus.
+  const handleContainerBlur = (event: FocusEvent<HTMLDivElement>) => {
+    if (readOnly || focus || !selected || event.relatedTarget) return
+    const el = containerRef.current
+    requestAnimationFrame(() => {
+      if (el && el.isConnected && !el.contains(document.activeElement)) {
+        el.focus({ preventScroll: true })
+      }
+    })
+  }
 
   const handleCopy = (event: ClipboardEvent<HTMLDivElement>) => {
     const selection = window.getSelection()
@@ -523,6 +557,7 @@ export function BlockEditor({
       ref={containerRef}
       tabIndex={-1}
       onKeyDown={handleKeyDown}
+      onBlur={handleContainerBlur}
       onCopy={handleCopy}
     >
       {doc.rootBlockIds.map((id) => {

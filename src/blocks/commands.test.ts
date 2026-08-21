@@ -233,6 +233,31 @@ describe("insertBelow", () => {
   })
 })
 
+describe("insertSiblingBelow", () => {
+  it("keeps the block's own type (heading stays a heading, sibling not nested)", () => {
+    const doc: BlockDoc = {
+      frontmatter: null,
+      rootBlockIds: ["h"],
+      blocks: { h: { id: "h", content: "# Title", children: [] } },
+    }
+    const result = runCommand("insertSiblingBelow", input(doc, "h", { visibleOrder: ["h"] }))
+    const id = newBlockId(doc, result.doc!)
+    expect(result.doc!.rootBlockIds).toEqual(["h", id])
+    expect(result.doc!.blocks[id].content).toBe("# ")
+  })
+
+  it("keeps a todo a todo", () => {
+    const doc: BlockDoc = {
+      frontmatter: null,
+      rootBlockIds: ["t"],
+      blocks: { t: { id: "t", content: "[x] done", children: [] } },
+    }
+    const result = runCommand("insertSiblingBelow", input(doc, "t", { visibleOrder: ["t"] }))
+    const id = newBlockId(doc, result.doc!)
+    expect(result.doc!.blocks[id].content).toBe("[ ] ")
+  })
+})
+
 describe("split", () => {
   it("splits a list item at the caret, continuing the marker", () => {
     const doc: BlockDoc = {

@@ -210,6 +210,7 @@ export type CommandName =
   | "toggleTodo"
   | "toggleCollapse"
   | "insertBelow"
+  | "insertSiblingBelow"
   | "splitContinuingList"
   | "splitPlain"
   | "exitList"
@@ -321,6 +322,15 @@ export const COMMANDS: Record<CommandName, Command> = {
     const fresh = emptyBlock(continuationMarker(type))
     let next = insertAfter(doc, id, fresh)
     if (type.kind === "heading") next = indentBlock(next, fresh.id)
+    return { handled: true, doc: next, op: STRUCTURAL, focus: { mode: "edit", id: fresh.id } }
+  },
+
+  /** New sibling block below, of the *same* type (Cmd/Shift+Enter). Unlike
+   * `insertBelow` a heading stays a heading and doesn't nest. */
+  insertSiblingBelow: ({ doc, id }) => {
+    const content = doc.blocks[id]?.content ?? ""
+    const fresh = emptyBlock(sameTypeMarker(getBlockType(content)))
+    const next = insertAfter(doc, id, fresh)
     return { handled: true, doc: next, op: STRUCTURAL, focus: { mode: "edit", id: fresh.id } }
   },
 

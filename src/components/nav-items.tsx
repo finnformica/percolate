@@ -118,19 +118,25 @@ export function NavItems({
           {notes.length > 0 ? (
             <ul className="flex flex-col gap-1 border-t border-border-secondary pt-3">
               {notes.map((note) => (
-                <li key={note.id} className="group/note flex items-center">
-                  <NoteNavItem note={note} size={size} onNavigate={onNavigate} />
-                  {/* The actions menu is display:none until hover (so the note
-                      name uses the full width and its ellipsis never reserves a
-                      gap); on hover it takes its place inline and the name
-                      truncates to make room. Stays shown while its menu is open. */}
-                  <NoteActionsMenu
-                    noteId={note.id}
-                    content={note.content}
-                    pinned={note.pinned}
-                    backlinks={note.backlinks}
-                    className="hidden group-hover/note:inline-flex has-data-[popup-open]:inline-flex"
+                <li key={note.id} className="group/note relative flex">
+                  {/* The note fills the row; on hover its text makes just enough
+                      room for the actions menu, which sits inside the row at the
+                      right edge (absolutely positioned, so it reads as part of
+                      the note button rather than a separate control). */}
+                  <NoteNavItem
+                    note={note}
+                    size={size}
+                    onNavigate={onNavigate}
+                    className="group-hover/note:pr-7"
                   />
+                  <div className="absolute inset-y-0 right-1 hidden items-center group-hover/note:flex has-data-[popup-open]:flex">
+                    <NoteActionsMenu
+                      noteId={note.id}
+                      content={note.content}
+                      pinned={note.pinned}
+                      backlinks={note.backlinks}
+                    />
+                  </div>
                 </li>
               ))}
             </ul>
@@ -267,10 +273,12 @@ function NoteNavItem({
   note,
   size,
   onNavigate,
+  className,
 }: {
   note: Note
   size: "medium" | "large"
   onNavigate?: () => void
+  className?: string
 }) {
   return (
     <Link
@@ -279,7 +287,7 @@ function NoteNavItem({
       search={{ query: undefined }}
       activeOptions={{ exact: true, includeSearch: false }}
       data-size={size}
-      className="nav-item w-0 flex-1"
+      className={cx("nav-item w-0 flex-1", className)}
       onClick={(event) => {
         if (!event.defaultPrevented) onNavigate?.()
       }}

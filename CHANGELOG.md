@@ -27,6 +27,12 @@
 - Copying a note or block produces clean markdown again (no stray `id::` lines or block metadata), through a single copy path everywhere.
 - Undo now re-highlights a block it brought back, so a delete + undo lands you back on it.
 - <kbd>⇧Enter</kbd> now splits into a new block of the same type (a heading stays a heading), and <kbd>⌘Enter</kbd> makes a new block below from anywhere — including a new root block from the note title.
+- A new block made below a highlighted heading or checkbox now keeps that type (a heading stays a heading, a checkbox stays a checkbox) instead of becoming a bullet.
+- The keyboard keeps working after you click elsewhere on the page — the highlighted block stays live instead of silently losing focus.
+- The highlighted block now scrolls itself back into the middle of the screen as it moves off, instead of drifting out of view.
+- <kbd>⌘⇧↑/↓</kbd> now moves the highlighted block again (it had started extending the selection instead).
+- <kbd>⌘C</kbd> copies a single highlighted block again.
+- While editing the note title, <kbd>↓</kbd> now drops into the first block below.
 
 ### Removed
 

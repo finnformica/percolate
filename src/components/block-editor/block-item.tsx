@@ -227,7 +227,7 @@ export function BlockItem({
     ) : null
 
   return (
-    <div className={cx(headingTopMargin(type, depth))}>
+    <div data-block-row={block.id} className={cx(headingTopMargin(type, depth))}>
       <div className="group relative flex items-start gap-1">
         {/* The toggle stays a fixed square; the wrapper mirrors the content
             cell's padding + line-height (via `typo`) and centres the square on

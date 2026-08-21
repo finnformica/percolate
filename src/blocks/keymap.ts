@@ -65,9 +65,9 @@ const atLastLine: Predicate = ({ caret }) => !!caret && caret.atLastLine
 export const KEYMAP: Binding[] = [
   // ── Select mode ────────────────────────────────────────────────────────
   { mode: "select", combo: "Enter", command: "enterEdit" },
-  // Cmd/Ctrl+Enter (or Shift+Enter) inserts a fresh block below and edits it.
-  { mode: "select", combo: "Mod+Enter", command: "insertBelow" },
-  { mode: "select", combo: "Shift+Enter", command: "insertBelow" },
+  // Cmd/Ctrl+Enter (or Shift+Enter) inserts a same-type block below and edits it.
+  { mode: "select", combo: "Mod+Enter", command: "insertSiblingBelow" },
+  { mode: "select", combo: "Shift+Enter", command: "insertSiblingBelow" },
   { mode: "select", combo: "Tab", command: "indent" },
   { mode: "select", combo: "Shift+Tab", command: "outdent" },
   { mode: "select", combo: "ArrowUp", command: "moveSelectionUp" },
@@ -99,8 +99,8 @@ export const KEYMAP: Binding[] = [
   { mode: "edit", combo: "Mod+Shift+ArrowDown", command: "moveBlockDown" },
   // Shift-Enter splits at the caret into a new block of the same type.
   { mode: "edit", combo: "Shift+Enter", command: "splitPlain" },
-  // Cmd/Ctrl+Enter forces a fresh block below, ignoring the caret.
-  { mode: "edit", combo: "Mod+Enter", command: "insertBelow" },
+  // Cmd/Ctrl+Enter forces a same-type block below, ignoring the caret.
+  { mode: "edit", combo: "Mod+Enter", command: "insertSiblingBelow" },
   // Enter: empty list item exits the list; caret-at-end appends a fresh block;
   // otherwise split the line at the caret (carrying the list style).
   { mode: "edit", combo: "Enter", when: isEmptyListItem, command: "exitList" },
